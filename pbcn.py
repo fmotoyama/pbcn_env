@@ -23,7 +23,7 @@ def get_unique_list(seq):
     return [x for x in seq if x not in seen and not seen.append(x)]
 
 class PBCN:
-    def __init__(self, pbcn_model):
+    def __init__(self, pbcn_model, target_x):
         """
         変数名、制御入力名は0からカウントアップ
         pbcn_model = [p_funcs1, p_funcs2, ...]
