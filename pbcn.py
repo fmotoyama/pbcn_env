@@ -12,7 +12,7 @@ import warnings
 warnings.simplefilter('error')
 
 import os, sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '.'))
 
 import utils
 import drawset
