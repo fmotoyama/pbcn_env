@@ -71,7 +71,8 @@ class PBCN:
             #reward = 0
         else:
             reward = 0
-        done = 1 if self.count == 1000 else 0
+        #done = 1 if self.count == 1000 else 0
+        done = None     # エージェントの方に決めさせる
         
         self.state = next_state
         return next_state, reward, done
