@@ -26,14 +26,14 @@ class PBCN:
     def __init__(self, pbcn_model, target_x):
         """
         変数名、制御入力名は0からカウントアップ
-        pbcn_model = [p_funcs1, p_funcs2, ...]
+        pbcn_model = [p_funcs0, p_funcs1, ...]
         p_funcs = [funcs, probs]
-        funcs = [func1, func2, ...]
-        probs = [prob1, prob2, ...] sum is 1
-        x: (N,)             x = self.x_space[state]
+        funcs = [func0, func1, ...]
+        probs = [prob0, prob1, ...], sum(prob) = 1
+        x: (N,)                         x = self.x_space[state]
         u: (M,)
-        state: 0~2**N-1     state = int(''.join(str(int(val)) for val in reversed(x)),2)
-        action: 0~2**M-1
+        state: 0 <= state < 2**N-1      state = int(''.join(str(int(val)) for val in reversed(x)),2)
+        action: 0 <= action < 2**M-1
         """
         self.pbcn_model = pbcn_model
         self.N, self.M = self.get_NM(self.pbcn_model)
