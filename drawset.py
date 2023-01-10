@@ -18,13 +18,13 @@ def transition_diagram(transition_table, fname='transition_diagram'):
     
     G = Digraph(format='png',engine='dot')#dot twopi
     G.attr(rankdir='LR') #'TB'
+    G.attr('graph',dpi='300')#,ratio='0.5')
     #G = Digraph(format='png', engine='circo')
-    G.attr('node', shape='circle', fixedsize='true')#, width='0.75', fontsize='20')
-    #G.attr('graph', splines = 'curved')
+    #G.attr('node', shape='circle', fixedsize='true')#, width='0.75', fontsize='20')
     for x,data in transition_table.items():
         for next_x,prob in zip(*data):
             if x == next_x:
-                G.node(x,shape='doublecircle',color='red')
+                #G.node(x,shape='doublecircle',color='red')
                 G.edge(x, next_x, label=str(round(prob,5)))
             else:
                 G.edge(x, next_x, label=str(round(prob,5)))

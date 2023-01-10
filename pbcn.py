@@ -220,7 +220,6 @@ class PBCN:
     def controller_to_func_minimum(self, controller):
         """
         QM法
-        set()を用いることで計算途中のデータ量を配列より少なくできる
         """
         func_lists = [[] for _ in range(self.M)]
         for state in range(2**self.N):
@@ -230,7 +229,6 @@ class PBCN:
                 func = [(i+1)*[-1,1][int(val)] for i,val in enumerate(self.x_space[state])]
                 for u_idx in u_idxs:
                     func_lists[u_idx].append(func)
-        
         
         func_lists_minimum = [utils.QM(func_list) for func_list in func_lists]
         
