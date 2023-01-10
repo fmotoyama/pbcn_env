@@ -65,14 +65,14 @@ class PBCN:
         if next_state == self.target_state:
             # 目標状態に到達したとき
             reward = 1
-        elif np.all(next_state == self.state):
+            done = 1
+        elif next_state == self.state:
             # 前と状態が変わらないとき
             reward = -1
-            #reward = 0
+            done = 0
         else:
             reward = 0
-        #done = 1 if self.count == 1000 else 0
-        done = None     # エージェントの方に決めさせる
+            done = 0
         
         self.state = next_state
         return next_state, reward, done
