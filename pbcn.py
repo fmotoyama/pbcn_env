@@ -14,7 +14,7 @@ warnings.simplefilter('error')
 import os, sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '.'))
 
-import utils
+from utils import QM, BDD
 import drawset
 
 
@@ -43,6 +43,7 @@ class PBCN:
         self.u_space = np.fliplr(np.array(list(itertools.product([0,1], repeat=self.M)), dtype=np.bool_))
         self.target_state = int(''.join(str(int(val)) for val in reversed(self.target_x)),2)
         
+        self.bdd = BDD()
         self.count = 0
     
     
@@ -116,10 +117,16 @@ class PBCN:
                 for u_idx in u_idxs:
                     controller_funcs[u_idx].append(func)
         controller_funcs = [
-            ' or '.join(terms) if terms != [] else False
+            ' or '.join(terms) if terms != [] else 'False'
             for terms in controller_funcs
             ]
         return controller_funcs
+    
+    
+    def get_ver_from_controller(controller):
+        # find the variables used by the controller using BDD
+        pass
+        
     
     def embed_controller(self, controller, minimum=False):
         """embed controller in pbcn_model"""
@@ -202,14 +209,14 @@ class PBCN:
             if target_x is not None:
                 f.write('\n')
                 f.write(str(target_x.tolist()))
-            if controller is not None:
-                f.write('\n')
-                f.write(str(controller.tolist()))
+                if controller is not None:
+                    f.write('\n')
+                    f.write(str(controller.tolist()))
     
     @staticmethod
     def load_pbcn_model(name = 'pbcn_model'):
         name = name + '.txt'
-        with open(name, mode='r') as f:
+        with open(name, mode='r', encoding="utf-8") as f:
             l = f.readlines()
             pbcn_model = ast.literal_eval(l[0])
             target_x = np.array(ast.literal_eval(l[1]), dtype=np.bool_) if 2 <= len(l) else None
@@ -219,7 +226,7 @@ class PBCN:
     
     def controller_to_func_minimum(self, controller):
         """
-        QM法
+        QM法 0,1の処理が問題
         """
         func_lists = [[] for _ in range(self.M)]
         for state in range(2**self.N):
@@ -230,7 +237,8 @@ class PBCN:
                 for u_idx in u_idxs:
                     func_lists[u_idx].append(func)
         
-        func_lists_minimum = [utils.QM(func_list) for func_list in func_lists]
+        #func_lists = [False if func_list == [] else func_list for func_list in func_lists]
+        func_lists_minimum = [QM(func_list) for func_list in func_lists]
         
         # funcに直す
         controller_funcs = [
@@ -239,7 +247,7 @@ class PBCN:
                     f'x[{v-1}]' if 0<v else f'not x[{-v-1}]'
                     for v in term)
                 for term in func_list)
-            for func_list in func_lists_minimum]
+            if type(func_list) is list else str(bool(func_list)) for func_list in func_lists_minimum]
         
         return controller_funcs
     
@@ -263,9 +271,9 @@ class PBCN:
 
 
 if __name__ == '__main__':
-    pbcn_model, target_x, controller = PBCN.load_pbcn_model('pbcn_model_3')
+    pbcn_model, target_x, controller = PBCN.load_pbcn_model('pbcn_model_pinning_3')
     
-    env = PBCN(pbcn_model)
+    env = PBCN(pbcn_model, target_x)
     
     
     #controller = np.array([1,0,1,1,0,0,0,0], dtype=np.int32)
