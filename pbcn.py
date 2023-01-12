@@ -43,7 +43,7 @@ class PBCN:
         self.u_space = np.fliplr(np.array(list(itertools.product([0,1], repeat=self.M)), dtype=np.bool_))
         self.target_state = int(''.join(str(int(val)) for val in reversed(self.target_x)),2)
         
-        self.bdd = BDD()
+        self.BDD = BDD()
         self.count = 0
     
     
@@ -123,9 +123,40 @@ class PBCN:
         return controller_funcs
     
     
-    def get_ver_from_controller(controller):
+    def get_ver_from_controller(self, controller):
         # find the variables used by the controller using BDD
-        pass
+        
+        # 積和標準形をつくる
+        func_lists = [[] for _ in range(self.M)]
+        for state in range(2**self.N):
+            u_idxs = np.where(self.u_space[controller[state]])[0]   # controller_funcに項を追加するuのindex
+            if len(u_idxs) != 0:
+                # xを積で表す項をつくり、controller_funcに追加
+                func = [(i+1)*[-1,1][int(val)] for i,val in enumerate(self.x_space[state])]
+                for u_idx in u_idxs:
+                    func_lists[u_idx].append(func)
+        
+        # func_listsに従ってApply演算
+        vers = set()
+        for func_list in func_lists:
+            # func_listのBDDを求める
+            root_terms = []
+            for term in func_list:
+                if term == []:
+                    continue
+                root = self.BDD.GetLeafNode(False)  # 葉ノード1
+                for v in term:
+                    root2 = self.BDD.GetUnitNode(abs(v), v<0)
+                    root = self.BDD.AP('AND', root, root2)
+                root_terms.append(root)
+            root_sum = self.BDD.GetLeafNode(True)   # 葉ノード0
+            for root_term in root_terms:
+                root_sum = self.BDD.AP('OR', root_sum, root_term)
+            
+            vers_term = self.BDD.GetV(root_sum)
+            vers = vers | vers_term
+        
+        return vers
         
     
     def embed_controller(self, controller, minimum=False):
@@ -202,26 +233,16 @@ class PBCN:
     
     
     @staticmethod
-    def save_pbcn_model(pbcn_model, target_x=None, controller=None, name = 'pbcn_model'):
-        """pbcn_modelをtxtファイルとして出力する"""
-        with open(f'{name}.txt', mode='w') as f:
-            f.write(str(pbcn_model))
-            if target_x is not None:
-                f.write('\n')
-                f.write(str(target_x.tolist()))
-                if controller is not None:
-                    f.write('\n')
-                    f.write(str(controller.tolist()))
+    def save_pbcn_info(**kwargs):
+        """txtファイルとして出力する"""
+        with open('pbcn_model.txt', mode='w') as f:
+            f.write(str(kwargs))
     
     @staticmethod
-    def load_pbcn_model(name = 'pbcn_model'):
-        name = name + '.txt'
-        with open(name, mode='r', encoding="utf-8") as f:
-            l = f.readlines()
-            pbcn_model = ast.literal_eval(l[0])
-            target_x = np.array(ast.literal_eval(l[1]), dtype=np.bool_) if 2 <= len(l) else None
-            controller = np.array(ast.literal_eval(l[2]), dtype=np.int32) if 3 <= len(l) else None
-        return pbcn_model, target_x, controller
+    def load_pbcn_info(name = 'pbcn_model'):
+        with open(name+'.txt', mode='r', encoding="utf-8") as f:
+            l = f.readline()
+        return ast.literal_eval(l)
     
     
     def controller_to_func_minimum(self, controller):
@@ -237,7 +258,6 @@ class PBCN:
                 for u_idx in u_idxs:
                     func_lists[u_idx].append(func)
         
-        #func_lists = [False if func_list == [] else func_list for func_list in func_lists]
         func_lists_minimum = [QM(func_list) for func_list in func_lists]
         
         # funcに直す
@@ -271,11 +291,14 @@ class PBCN:
 
 
 if __name__ == '__main__':
-    pbcn_model, target_x, controller = PBCN.load_pbcn_model('pbcn_model_pinning_3')
+    info = PBCN.load_pbcn_info('pbcn_model_pinning_3')
+    pbcn_model = info['pbcn_model']
+    target_x = np.array(info['target_x'], dtype=np.bool_)
+    controller = np.array(info['controller'], dtype=np.int32)
     
     env = PBCN(pbcn_model, target_x)
     
-    
+    ver = env.get_ver_from_controller(controller)
     #controller = np.array([1,0,1,1,0,0,0,0], dtype=np.int32)
     #controller = np.array([0,0,0,0,0,0,0,0], dtype=np.int32)
     #controller = np.array([1,1,0,0,0,0,0,0], dtype=np.int32)
@@ -306,7 +329,7 @@ if __name__ == '__main__':
     plt.legend()
     plt.show()
     
-    env.save_pbcn_model(pbcn_model, target_x)
+    env.save_pbcn_info(pbcn_model=pbcn_model, target_x=target_x, controller=controller)
 
 
 

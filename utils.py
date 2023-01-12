@@ -21,18 +21,21 @@ def get_unique_list(seq):
 def QM(f):
     """
     fを最簡形にする
-    f: 積和標準形を表す2次元list
-    項の表現にset()を用いることで、行列で表すより小さくなりやすい
+    f: 積和標準形を表す2次元list 変数名には0を用いてはいけない
+    項の表現にset()を用いることで、行列で作業するより小さくなりやすい
     """
     if f in [0,1]:
         return f
     
-    #fで用いられている変数を抽出
+    # fで用いられている変数を抽出
     V = set([abs(v) for v in itertools.chain.from_iterable(f)])
     l = len(V)          #変数の個数
     
-    #fの各項をset型に変換 符号違いの変数をもつ項を削除する
-    f = [set(term) for term in f if len(set(map(abs,term))) == len(term)]
+    # fの各項をset型に変換
+    ## 項内の同じ変数を削除
+    f = [set(term) for term in f]
+    ## 符号違いの変数をもつ項を削除
+    f = [term for term in f if len(set(map(abs,term))) == len(term)]
     if f == []:
         return 0
     
