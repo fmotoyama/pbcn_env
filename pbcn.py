@@ -22,18 +22,23 @@ def get_unique_list(seq):
     seen = []
     return [x for x in seq if x not in seen and not seen.append(x)]
 
+#!!!gym_apiとpbcn_envを分離させたい
 class PBCN:
     def __init__(self, pbcn_model, target_x):
         """
-        変数名、制御入力名は0からカウントアップ
-        pbcn_model = [p_funcs0, p_funcs1, ...]
-        p_funcs = [funcs, probs]
+        pbcn_data = {x_names: ~, u_names: ~, tarnsition_rules: ~}
+        x_names = [x1,x2,...], u_names = [u1,u2,...]
+        transition_rules = [p_funcs0, p_funcs1, ...]
+        transition_rule = [funcs, probs]
         funcs = [func0, func1, ...]
-        probs = [prob0, prob1, ...], sum(prob) = 1
-        x: (N,)                         x = self.x_space[state]
+        probs = [prob0, prob1, ...], sum(probs) = 1
+        func = x1 or u2 and ...
+        x: (N,)      
         u: (M,)
-        state: 0 <= state < 2**N-1      state = int(''.join(str(int(val)) for val in reversed(x)),2)
+        state: 0 <= state < 2**N-1
         action: 0 <= action < 2**M-1
+        (x = self.x_space[state])
+        (state = int(''.join(str(int(val)) for val in reversed(x)),2))
         """
         self.pbcn_model = pbcn_model
         self.N, self.M = self.get_NM(self.pbcn_model)
@@ -329,7 +334,11 @@ if __name__ == '__main__':
     plt.legend()
     plt.show()
     
-    env.save_pbcn_info(pbcn_model=pbcn_model, target_x=target_x, controller=controller)
+    env.save_pbcn_info(
+        pbcn_model=pbcn_model,
+        target_x=target_x,
+        controller=controller.tolist()
+        )
 
 
 
