@@ -23,25 +23,25 @@ def get_unique_list(seq):
     return [x for x in seq if x not in seen and not seen.append(x)]
 
 class PBCN:
-    def __init__(self, pbcn_model, target_x):
+    def __init__(self, pbcn_model, target_X):
         """
         変数名、制御入力名は0からカウントアップ
-        pbcn_model = [p_funcs0, p_funcs1, ...]
-        p_funcs = [funcs, probs]
+        pbcn_model = [transition_rule1, transition_rule2, ...]
+        transition_rule = [funcs, probs]
         funcs = [func0, func1, ...]
         probs = [prob0, prob1, ...], sum(prob) = 1
-        x: (N,)                         x = self.x_space[state]
-        u: (M,)
-        state: 0 <= state < 2**N-1      state = int(''.join(str(int(val)) for val in reversed(x)),2)
+        X: (N,)                         X = self.X_space[state]
+        U: (M,)
+        state: 0 <= state < 2**N-1      state = int(''.join(str(int(val)) for val in reversed(X)),2)
         action: 0 <= action < 2**M-1
         """
         self.pbcn_model = pbcn_model
         self.N, self.M = self.get_NM(self.pbcn_model)
-        self.target_x = target_x
+        self.target_X = target_X
         
-        self.x_space = np.fliplr(np.array(list(itertools.product([0,1], repeat=self.N)), dtype=np.bool_))
-        self.u_space = np.fliplr(np.array(list(itertools.product([0,1], repeat=self.M)), dtype=np.bool_))
-        self.target_state = int(''.join(str(int(val)) for val in reversed(self.target_x)),2)
+        self.X_space = np.fliplr(np.array(list(itertools.product([0,1], repeat=self.N)), dtype=np.bool_))
+        self.U_space = np.fliplr(np.array(list(itertools.product([0,1], repeat=self.M)), dtype=np.bool_))
+        self.target_state = int(''.join(str(int(val)) for val in reversed(self.target_X)),2)
         
         self.BDD = BDD()
         self.count = 0
@@ -55,10 +55,10 @@ class PBCN:
     
     def step(self, action):
         self.count += 1
-        x = self.x_space[self.state]
-        u = self.u_space[action]
+        x = self.X_space[self.state]
+        u = self.U_space[action]
         next_x = np.array([
-            self.calc(p_funcs, x, u) for p_funcs in self.pbcn_model
+            self.calc(transition_rule, x, u) for transition_rule in self.pbcn_model
             ])
         next_state = int(''.join(str(int(val)) for val in reversed(next_x)),2)
         
@@ -80,14 +80,14 @@ class PBCN:
     
     
     def step_with_controller(self, controller):
-        x = self.x_space[self.state]
-        u = self.u_space[controller[self.state]]
+        x = self.X_space[self.state]
+        u = self.U_space[controller[self.state]]
         next_x = np.array([
-            self.calc(p_funcs, x, u) for p_funcs in self.pbcn_model
+            self.calc(transition_rule, x, u) for transition_rule in self.pbcn_model
             ])
         next_state = int(''.join(str(int(val)) for val in reversed(next_x)),2)
         
-        if np.all(next_x == self.target_x):
+        if np.all(next_x == self.target_X):
             # 目標状態に到達したとき
             done = 1
         else:
@@ -98,8 +98,8 @@ class PBCN:
     
     
     @staticmethod
-    def calc(p_funcs: list, x: np.bool_, u: np.bool_=None):
-        func = np.random.choice(a=p_funcs[0], size=1, p=p_funcs[1])[0]
+    def calc(transition_rule: list, x: np.bool_, u: np.bool_=None):
+        func = np.random.choice(a=transition_rule[0], size=1, p=transition_rule[1])[0]
         return eval(func)
     
     
@@ -107,12 +107,12 @@ class PBCN:
         """express the controller as functions"""
         controller_funcs = [[] for _ in range(self.M)]
         for state in range(2**self.N):
-            u_idxs = np.where(self.u_space[controller[state]])[0]   # controller_funcに項を追加するuのindex
+            u_idxs = np.where(self.U_space[controller[state]])[0]   # controller_funcに項を追加するuのindex
             if len(u_idxs) != 0:
                 # xを積で表す項をつくり、controller_funcに追加
                 func = ' and '.join(
                     f'x[{i}]' if val==True else f'not x[{i}]'
-                    for i,val in enumerate(self.x_space[state])
+                    for i,val in enumerate(self.X_space[state])
                     )
                 for u_idx in u_idxs:
                     controller_funcs[u_idx].append(func)
@@ -129,10 +129,10 @@ class PBCN:
         # 積和標準形をつくる
         func_lists = [[] for _ in range(self.M)]
         for state in range(2**self.N):
-            u_idxs = np.where(self.u_space[controller[state]])[0]   # controller_funcに項を追加するuのindex
+            u_idxs = np.where(self.U_space[controller[state]])[0]   # controller_funcに項を追加するuのindex
             if len(u_idxs) != 0:
                 # xを積で表す項をつくり、controller_funcに追加
-                func = [(i+1)*[-1,1][int(val)] for i,val in enumerate(self.x_space[state])]
+                func = [(i+1)*[-1,1][int(val)] for i,val in enumerate(self.X_space[state])]
                 for u_idx in u_idxs:
                     func_lists[u_idx].append(func)
         
@@ -163,10 +163,10 @@ class PBCN:
         """embed controller in pbcn_model"""
         controller_func = self.controller_to_func_minimum(controller) if minimum == True else self.controller_to_func(controller)
         pbn_model = copy.deepcopy(self.pbcn_model)
-        for p_funcs in pbn_model:
-            for func_idx in range(len(p_funcs[0])):
+        for transition_rule in pbn_model:
+            for func_idx in range(len(transition_rule[0])):
                 for i in range(self.M):
-                    p_funcs[0][func_idx] = p_funcs[0][func_idx].replace(f'u[{i}]',f'({controller_func[i]})')
+                    transition_rule[0][func_idx] = transition_rule[0][func_idx].replace(f'u[{i}]',f'({controller_func[i]})')
         return pbn_model
     
     @staticmethod
@@ -177,19 +177,19 @@ class PBCN:
         """
         N,M = PBCN.get_NM(pbn_model)
         assert M==0
-        x_space = np.fliplr(np.array(list(itertools.product([0,1], repeat=N)), dtype=np.bool_))
+        X_space = np.fliplr(np.array(list(itertools.product([0,1], repeat=N)), dtype=np.bool_))
         # 遷移パターンを列挙
         transition_patterns = list(
             zip(
-                itertools.product(*[p_funcs[0] for p_funcs in pbn_model]),
-                map(np.prod, itertools.product(*[p_funcs[1] for p_funcs in pbn_model]))
+                itertools.product(*[transition_rule[0] for transition_rule in pbn_model]),
+                map(np.prod, itertools.product(*[transition_rule[1] for transition_rule in pbn_model]))
                 )
             )
         assert sum(transition_pattern[1] for transition_pattern in transition_patterns) == 1
         
         # 遷移パターンごとの遷移を計算
         transition_table = dict()
-        for x in x_space:
+        for x in X_space:
             next_xs = np.array(
                 [[eval(func,{'x':x}) for func in funcs] for funcs,_ in transition_patterns],
                 dtype=np.bool_
@@ -213,7 +213,7 @@ class PBCN:
         
     @staticmethod
     def get_NM(pbcn_model, check=False):
-        content = ' '.join(' '.join(func for func in p_funcs[0]) for p_funcs in pbcn_model)
+        content = ' '.join(' '.join(func for func in transition_rule[0]) for transition_rule in pbcn_model)
         if check is False:
             # 式に出現する変数の最も大きいものを探す
             N = max(map(int,set(re.findall(r'x\[(\d+)\]', content))), default=-1) + 1
@@ -247,14 +247,14 @@ class PBCN:
     
     def controller_to_func_minimum(self, controller):
         """
-        QM法 0,1の処理が問題
+        QM法
         """
         func_lists = [[] for _ in range(self.M)]
         for state in range(2**self.N):
-            u_idxs = np.where(self.u_space[controller[state]])[0]   # controller_funcに項を追加するuのindex
+            u_idxs = np.where(self.U_space[controller[state]])[0]   # controller_funcに項を追加するuのindex
             if len(u_idxs) != 0:
                 # xを積で表す項をつくり、controller_funcに追加
-                func = [(i+1)*[-1,1][int(val)] for i,val in enumerate(self.x_space[state])]
+                func = [(i+1)*[-1,1][int(val)] for i,val in enumerate(self.X_space[state])]
                 for u_idx in u_idxs:
                     func_lists[u_idx].append(func)
         
@@ -277,10 +277,10 @@ class PBCN:
         content = ' '.join([func1,func2])
         N = max(map(int,set(re.findall(r'x\[(\d+)\]', content))), default=-1) + 1
         M = max(map(int,set(re.findall(r'u\[(\d+)\]', content))), default=-1) + 1
-        x_space = np.fliplr(np.array(list(itertools.product([0,1], repeat=N)), dtype=np.bool_))
-        u_space = np.fliplr(np.array(list(itertools.product([0,1], repeat=M)), dtype=np.bool_))
+        X_space = np.fliplr(np.array(list(itertools.product([0,1], repeat=N)), dtype=np.bool_))
+        U_space = np.fliplr(np.array(list(itertools.product([0,1], repeat=M)), dtype=np.bool_))
         
-        for x,u in itertools.product(x_space,u_space):
+        for x,u in itertools.product(X_space,U_space):
             assert eval(func1) == eval(func2)
         return True
 
@@ -293,10 +293,10 @@ class PBCN:
 if __name__ == '__main__':
     info = PBCN.load_pbcn_info('pbcn_model_pinning_3')
     pbcn_model = info['pbcn_model']
-    target_x = np.array(info['target_x'], dtype=np.bool_)
+    target_X = np.array(info['target_X'], dtype=np.bool_)
     controller = np.array(info['controller'], dtype=np.int32)
     
-    env = PBCN(pbcn_model, target_x)
+    env = PBCN(pbcn_model, target_X)
     
     ver = env.get_ver_from_controller(controller)
     #controller = np.array([1,0,1,1,0,0,0,0], dtype=np.int32)
@@ -329,7 +329,7 @@ if __name__ == '__main__':
     plt.legend()
     plt.show()
     
-    env.save_pbcn_info(pbcn_model=pbcn_model, target_x=target_x, controller=controller)
+    env.save_pbcn_info(pbcn_model=pbcn_model, target_X=target_X, controller=controller)
 
 
 
