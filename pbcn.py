@@ -249,23 +249,23 @@ class gym_PBCN(PBCN):
     
     def reset(self):
         self.count = 0
-        self.state = np.random.randint(2**self.N)
-        return self.state
+        self.x_idx = np.random.randint(2**self.N)
+        return self.x_idx
     
     def step(self, action):
         self.count += 1
-        x = self.x_space[self.state]
+        x = self.x_space[self.x_idx]
         u = self.u_space[action]
         next_x = np.array([
             self.calc(transition_rule, x, u) for transition_rule in self.pbcn_model
             ])
-        next_state = int(''.join(str(int(val)) for val in reversed(next_x)),2)
+        next_state = self.convert(next_x)
         
         if next_state == self.target_state:
             # 目標状態に到達したとき
             reward = 1
             done = 1
-        elif next_state == self.state:
+        elif next_state == self.x_idx:
             # 前と状態が変わらないとき
             reward = -1
             done = 0
@@ -273,17 +273,17 @@ class gym_PBCN(PBCN):
             reward = 0
             done = 0
         
-        self.state = next_state
+        self.x_idx = next_state
         return next_state, reward, done
     
         
     def step_with_controller(self, controller):
-        x = self.x_space[self.state]
-        u = self.u_space[controller[self.state]]
+        x = self.x_space[self.x_idx]
+        u = self.u_space[controller[self.x_idx]]
         next_x = np.array([
             self.calc(transition_rule, x, u) for transition_rule in self.pbcn_model
             ])
-        next_state = int(''.join(str(int(val)) for val in reversed(next_x)),2)
+        next_state = self.convert(next_x)
         
         if np.all(next_x == self.target_x):
             # 目標状態に到達したとき
@@ -291,7 +291,7 @@ class gym_PBCN(PBCN):
         else:
             done = 0
             
-        self.state = next_state
+        self.x_idx = next_state
         return next_x, done
 
 
@@ -315,7 +315,7 @@ if __name__ == '__main__':
     controller_funcs = env.controller_to_func(controller)
     controller_funcs_minimum = env.controller_to_func_minimum(controller)
     [env.is_same_func(controller_func,controller_func_minimum) for controller_func,controller_func_minimum in zip(controller_funcs,controller_funcs_minimum)]
-    pbn_model = env.embed_controller(controller)
+    pbn_model = env.embed_controller(controller, minimum=True)
     transition_list = env.pbn_model_to_transition_list(pbn_model)
     drawset.transition_diagram(transition_list)
     
