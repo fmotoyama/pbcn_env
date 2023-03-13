@@ -13,15 +13,15 @@ from graphviz import Digraph
 
 
 
-def transition_diagram(transition_table, fname='transition_diagram'): 
-    """transition_table[x] = [[x1,x2,...],[p1,p2,...]]"""
+def transition_diagram(transition_list, fname='transition_diagram'): 
+    """transition_list[x] = [[x1,x2,...],[p1,p2,...]]"""
     
     G = Digraph(format='png',engine='dot')#dot twopi
     G.attr(rankdir='LR') #'TB'
     G.attr('graph',dpi='300')#,ratio='0.5')
     #G = Digraph(format='png', engine='circo')
     #G.attr('node', shape='circle', fixedsize='true')#, width='0.75', fontsize='20')
-    for x,data in transition_table.items():
+    for x,data in transition_list.items():
         for next_x,prob in zip(*data):
             if x == next_x:
                 #G.node(x,shape='doublecircle',color='red')
