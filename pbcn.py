@@ -32,8 +32,6 @@ class PBCN:
         probs = [prob0, prob1, ...], sum(prob) = 1
         x: np.array((N,), dtype=np.bool_)
         u: np.array((M,), dtype=np.bool_)
-        (x = self.x_space[x_idx])
-        (x_idx = int(''.join(str(int(val)) for val in reversed(x)),2))
         """
         self.pbcn_model = pbcn_model
         self.N, self.M = self.get_NM(self.pbcn_model)
@@ -77,6 +75,66 @@ class PBCN:
         return controller_funcs
     
     
+    def controller_to_func_minimum(self, controller):
+        """QM法"""
+        func_lists = [[] for _ in range(self.M)]
+        for x_idx in range(2**self.N):
+            u_idxs = np.where(self.u_space[controller[x_idx]])[0]   # controller_funcに項を追加するuのindex
+            if len(u_idxs) != 0:
+                # xを積で表す項をつくり、controller_funcに追加
+                func = [(i+1)*[-1,1][int(val)] for i,val in enumerate(self.x_space[x_idx])]
+                for u_idx in u_idxs:
+                    func_lists[u_idx].append(func)
+        
+        func_lists_minimum = [QM(func_list) for func_list in func_lists]
+        
+        # funcに直す
+        controller_funcs = [
+            ' or '.join(
+                ' and '.join(
+                    f'x[{v-1}]' if 0<v else f'not x[{-v-1}]'
+                    for v in term)
+                for term in func_list)
+            if type(func_list) is list else str(bool(func_list)) for func_list in func_lists_minimum]
+        
+        return controller_funcs
+    
+    
+    def minimize_func(self, func: str):
+        """入力をもたない式を簡単化する"""
+        # 全ての状態に対する出力を見て、func_listを得る
+        V = sorted(map(int,list(set(re.findall(r'x\[(\d+)\]', func)))))
+        if len(V) == 0:
+            return func
+        xs = []
+        for x_origin in itertools.product([1,0], repeat=len(V)):
+            # 生成した入力側の変数名をVと合わせる
+            x = {variable:value for variable,value in zip(V,x_origin)}
+            if eval(func):
+                xs.append(x_origin)
+        
+        func_list = [
+            [
+                variable+1 if value==1 else -(variable+1)
+                for variable,value in zip(V,x)]
+            for x in xs]
+        func_list_minimum = QM(func_list)
+        
+        # func_listをfuncに戻す
+        if func_list_minimum == 1:
+            return 'True'
+        func_minimum = ' or '.join(
+            ' and '.join(
+                f'x[{v-1}]' if 0<v else f'not x[{-v-1}]'
+                for v in term)
+            for term in func_list_minimum)
+        
+        return func_minimum
+            
+        
+        
+        
+    
     def get_ver_from_controller(self, controller):
         # find the variables used by the controller, using BDD
         
@@ -115,7 +173,7 @@ class PBCN:
     
     def embed_controller(self, controller, minimum=False):
         """embed controller in pbcn_model"""
-        controller_func = self.controller_to_func_minimum(controller) if minimum == True else self.controller_to_func(controller)
+        controller_func = self.controller_to_func_minimum(controller) if minimum is True else self.controller_to_func(controller)
         pbn_model = copy.deepcopy(self.pbcn_model)
         for transition_rule in pbn_model:
             for func_idx in range(len(transition_rule[0])):
@@ -196,32 +254,8 @@ class PBCN:
     def load_pbcn_info(name = 'pbcn_model'):
         with open(name+'.txt', mode='r', encoding="utf-8") as f:
             l = f.readline()
-        return ast.literal_eval(l)
-    
-    
-    def controller_to_func_minimum(self, controller):
-        """QM法"""
-        func_lists = [[] for _ in range(self.M)]
-        for x_idx in range(2**self.N):
-            u_idxs = np.where(self.u_space[controller[x_idx]])[0]   # controller_funcに項を追加するuのindex
-            if len(u_idxs) != 0:
-                # xを積で表す項をつくり、controller_funcに追加
-                func = [(i+1)*[-1,1][int(val)] for i,val in enumerate(self.x_space[x_idx])]
-                for u_idx in u_idxs:
-                    func_lists[u_idx].append(func)
-        
-        func_lists_minimum = [QM(func_list) for func_list in func_lists]
-        
-        # funcに直す
-        controller_funcs = [
-            ' or '.join(
-                ' and '.join(
-                    f'x[{v-1}]' if 0<v else f'not x[{-v-1}]'
-                    for v in term)
-                for term in func_list)
-            if type(func_list) is list else str(bool(func_list)) for func_list in func_lists_minimum]
-        
-        return controller_funcs
+        #return ast.literal_eval(l)
+        return eval(l)
     
     
     @staticmethod
@@ -314,11 +348,11 @@ if __name__ == '__main__':
     # コントローラを式にしてpbcnに埋め込む
     controller_funcs = env.controller_to_func(controller)
     controller_funcs_minimum = env.controller_to_func_minimum(controller)
+    controller_funcs_minimum2 = [env.minimize_func(controller_func) for controller_func in controller_funcs]
     [env.is_same_func(controller_func,controller_func_minimum) for controller_func,controller_func_minimum in zip(controller_funcs,controller_funcs_minimum)]
     pbn_model = env.embed_controller(controller, minimum=True)
     transition_list = env.pbn_model_to_transition_list(pbn_model)
     drawset.transition_diagram(transition_list)
-    
     
     
     # コントローラで状態遷移を行う
@@ -338,7 +372,11 @@ if __name__ == '__main__':
     plt.legend()
     plt.show()
     
-    env.save_pbcn_info(pbcn_model=pbcn_model, target_x=target_x, controller=controller)
+    env.save_pbcn_info(
+        pbcn_model=pbcn_model,
+        target_x=target_x.tolist(),
+        controller=controller
+        )
 
 
 
