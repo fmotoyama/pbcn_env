@@ -99,8 +99,8 @@ class PBCN:
         
         return controller_funcs
     
-    
-    def minimize_func(self, func: str):
+    @staticmethod
+    def minimize_func(func: str):
         """入力をもたない式を簡単化する"""
         # 全ての状態に対する出力を見て、func_listを得る
         V = sorted(map(int,list(set(re.findall(r'x\[(\d+)\]', func)))))
