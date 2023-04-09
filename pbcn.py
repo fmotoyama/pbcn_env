@@ -332,7 +332,7 @@ class gym_PBCN(PBCN):
 
 if __name__ == '__main__':
     # txtファイルからインポート
-    info = PBCN.load_pbcn_info('pbcn_model_pinning_3')
+    info = PBCN.load_pbcn_info('pbcn_model_pinning_3 (2)')
     pbcn_model = info['pbcn_model']
     target_x = np.array(info['target_x'], dtype=np.bool_)
     controller = np.array(info['controller'], dtype=np.int32)

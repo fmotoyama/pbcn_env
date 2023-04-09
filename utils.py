@@ -110,6 +110,7 @@ def QM(f):
                 f_petric_ANDOR2 += [term_AND | {v} for term_AND in f_petric_ANDOR]
             f_petric_ANDOR = get_unique_list(f_petric_ANDOR2)
         #積和系で最短の項を求める
+        idx_principal2 = list()
         temp = len(terms_principal2)
         for term_AND in f_petric_ANDOR:
             if len(term_AND) < temp:
