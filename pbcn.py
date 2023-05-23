@@ -277,7 +277,6 @@ class gym_PBCN(PBCN):
     def __init__(self, pbcn_model, target_x):
         super().__init__(pbcn_model)
         self.target_x = target_x
-        #self.target_state = int(''.join(str(int(val)) for val in reversed(target_x)),2)
         self.target_state = self.convert(target_x)
         self.count = 0      # 遷移回数
     
@@ -336,9 +335,6 @@ if __name__ == '__main__':
     pbcn_model = info['pbcn_model']
     target_x = np.array(info['target_x'], dtype=np.bool_)
     controller = np.array(info['controller'], dtype=np.int32)
-    #controller = np.array([1,0,1,1,0,0,0,0], dtype=np.int32)
-    #controller = np.array([0,0,0,0,0,0,0,0], dtype=np.int32)
-    #controller = np.array([1,1,0,0,0,0,0,0], dtype=np.int32)
     
     env = gym_PBCN(pbcn_model, target_x)
     
