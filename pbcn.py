@@ -291,6 +291,13 @@ class gym_PBCN(PBCN):
             ])
         next_state = self.convert(next_x)
         
+        reward,done = self.reward_func(next_state)
+        
+        self.x_idx = next_state
+        return next_state, reward, done
+    
+    
+    def reward_func(self,next_state):
         if next_state == self.target_state:
             # 目標状態に到達したとき
             reward = 1
@@ -302,10 +309,8 @@ class gym_PBCN(PBCN):
         else:
             reward = 0
             done = 0
+        return reward, done
         
-        self.x_idx = next_state
-        return next_state, reward, done
-    
         
     def step_with_controller(self, controller):
         x = self.x_space[self.x_idx]
