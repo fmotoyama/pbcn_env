@@ -131,9 +131,6 @@ class PBCN:
         
         return func_minimum
             
-        
-        
-        
     
     def get_ver_from_controller(self, controller):
         # find the variables used by the controller, using BDD
@@ -247,12 +244,12 @@ class PBCN:
     @staticmethod
     def save_pbcn_info(**kwargs):
         """txtファイルとして出力する"""
-        with open('pbcn_model.txt', mode='w') as f:
+        with open('data/pbcn_model.txt', mode='w') as f:
             f.write(str(kwargs))
     
     @staticmethod
     def load_pbcn_info(name = 'pbcn_model'):
-        with open(name+'.txt', mode='r', encoding="utf-8") as f:
+        with open(f'data/{name}.txt', mode='r', encoding="utf-8") as f:
             l = f.readline()
         #return ast.literal_eval(l)
         return eval(l)

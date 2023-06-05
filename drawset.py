@@ -13,7 +13,7 @@ from graphviz import Digraph
 
 
 
-def transition_diagram(transition_list, fname='transition_diagram'): 
+def transition_diagram(transition_list: dict, fname='transition_diagram'): 
     """transition_list[x] = [[x1,x2,...],[p1,p2,...]]"""
     
     G = Digraph(format='png',engine='dot')#dot twopi
