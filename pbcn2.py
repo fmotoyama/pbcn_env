@@ -286,6 +286,9 @@ class gym_PBCN(PBCN):
         self.x = np.random.randint(0, 2, self.N, dtype=np.bool_)
         return self.x
     
+    def random_action(self):
+        return np.random.randint(0, 2, self.M, dtype=np.bool_)
+    
     def step(self, action):
         self.count += 1
         x = self.x
