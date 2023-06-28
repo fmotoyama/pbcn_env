@@ -269,14 +269,16 @@ class PBCN:
     
 class gym_PBCN(PBCN):
     def __init__(self, pbcn_model, target_x):
-        super().__init__(pbcn_model)
+        info = PBCN.load_pbcn_info(name)
+        self.pbcn_model = info['pbcn_model']
+        self.target_x = np.array(info['target_x'])
+        self.target_state = self.state2idx(self.target_x)
+        super().__init__(self.pbcn_model)
         self.observation_size = self.N
         self.action_size = self.M
         self.observation_shape = (self.N,)
         self.action_shape = (self.M,)
         
-        self.target_x = target_x
-        self.target_state = self.state2idx(target_x)
         self.count = 0      # 遷移回数
     
     def reset(self):
