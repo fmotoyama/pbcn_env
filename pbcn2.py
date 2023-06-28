@@ -310,7 +310,7 @@ class gym_PBCN(PBCN):
             done = 0
         
         self.x = next_x
-        return next_x, reward, done
+        return next_x, reward, done, _
     
         
     def step_with_controller(self, controller):
