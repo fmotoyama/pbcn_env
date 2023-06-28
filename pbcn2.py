@@ -272,34 +272,33 @@ class gym_PBCN(PBCN):
         info = PBCN.load_pbcn_info(name)
         self.pbcn_model = info['pbcn_model']
         self.target_x = np.array(info['target_x'])
-        self.target_state = self.state2idx(self.target_x)
         super().__init__(self.pbcn_model)
+        
         self.observation_size = self.N
-        self.action_size = self.M
         self.observation_shape = (self.N,)
+        self.action_size = self.M
         self.action_shape = (self.M,)
         
-        self.count = 0      # 遷移回数
+        #self.count = 0      # 遷移回数
     
     def reset(self):
         self.count = 0
-        self.x_idx = np.random.randint(2**self.N)
-        return self.x_idx
+        self.x = np.random.randint(0, 2, self.N, dtype=np.bool_)
+        return self.x
     
     def step(self, action):
         self.count += 1
-        x = self.idx2state(self.x_idx,self.N)
-        u = self.idx2state(action,self.M)
+        x = self.x
+        u = np.array(action, dtype=np.bool_)
         next_x = np.array([
             self.calc(transition_rule, x, u) for transition_rule in self.pbcn_model
             ])
-        next_state = self.idx2state(next_x,self.N)
         
-        if next_state == self.target_state:
+        if np.all(next_x == self.target_x):
             # 目標状態に到達したとき
             reward = 1
             done = 1
-        elif next_state == self.x_idx:
+        elif np.all(next_x == self.x):
             # 前と状態が変わらないとき
             reward = -1
             done = 0
@@ -307,17 +306,16 @@ class gym_PBCN(PBCN):
             reward = 0
             done = 0
         
-        self.x_idx = next_state
-        return next_state, reward, done
+        self.x = next_x
+        return next_x, reward, done
     
         
     def step_with_controller(self, controller):
-        x = self.idx2state(self.x_idx,self.N)
-        u = self.idx2state(controller[self.x_idx],self.M)
+        x = self.x
+        u = self.idx2state(controller[self.state2idx(self.x)],self.M)
         next_x = np.array([
             self.calc(transition_rule, x, u) for transition_rule in self.pbcn_model
             ])
-        next_state = self.state2idx(next_x)
         
         if np.all(next_x == self.target_x):
             # 目標状態に到達したとき
@@ -325,7 +323,7 @@ class gym_PBCN(PBCN):
         else:
             done = 0
             
-        self.x_idx = next_state
+        self.x = next_x
         return next_x, done
 
 
@@ -337,8 +335,10 @@ if __name__ == '__main__':
     target_x = np.array(info['target_x'], dtype=np.bool_)
     controller = np.array(info['controller'], dtype=np.int32)
     
-    env = gym_PBCN(pbcn_model, target_x)
-    
+    env = gym_PBCN('pbcn_model_pinning_3 (2)')
+    x_space = np.array(list(itertools.product([1,0], repeat=env.N)), dtype=np.bool_)
+    u_space = np.array(list(itertools.product([1,0], repeat=env.N)), dtype=np.bool_)
+        
     # コントローラが用いる変数を取得
     ver = env.get_ver_from_controller(controller)
     
@@ -353,14 +353,15 @@ if __name__ == '__main__':
     
     
     # コントローラで状態遷移を行う
-    num_try = 100; time = 150
+    num_try = 100
+    time = 150
     data = np.empty((num_try,time,env.N), dtype=np.bool_)
     for n in range(num_try):
         env.reset()
         #env.state = 2
         for t in range(time):
-            next_state, done = env.step_with_controller(controller)
-            data[n,t] = next_state
+            next_x, done = env.step_with_controller(controller)
+            data[n,t] = next_x
     # 各試行の平均をとる
     data_mean = np.mean(data, axis=0)
     
