@@ -268,7 +268,7 @@ class PBCN:
 
     
 class gym_PBCN(PBCN):
-    def __init__(self, pbcn_model, target_x):
+    def __init__(self, name):
         info = PBCN.load_pbcn_info(name)
         self.pbcn_model = info['pbcn_model']
         self.target_x = np.array(info['target_x'])
