@@ -241,7 +241,8 @@ class PBCN:
     @staticmethod
     def save_pbcn_info(**kwargs):
         """txtファイルとして出力する"""
-        with open('data/pbcn_model.txt', mode='w') as f:
+        #with open('data/pbcn_model.txt', mode='w') as f:
+        with open('pbcn_model.txt', mode='w') as f:
             f.write(str(kwargs))
     
     @staticmethod
@@ -310,7 +311,7 @@ class gym_PBCN(PBCN):
             done = 0
         
         self.x = next_x
-        return next_x, reward, done, _
+        return next_x, reward, done, None
     
         
     def step_with_controller(self, controller):
