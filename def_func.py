@@ -24,7 +24,8 @@ def def_f(mode, **kwargs):
         # 状態遷移図をランダムなつなぎ方をする
         default = {
             'n': 20,
-            'gamma': 3.0     # gammaを大きくすると疎になる
+            'gamma': 3.0,    # gammaを大きくすると疎になる
+            'reduce': True
             }
         kwargs = {**default, **kwargs}
         
@@ -60,10 +61,11 @@ def def_f(mode, **kwargs):
             for v in np.where(output[:,x_idx] == 2)[0]:
                 func_listss[v][np.random.randint(2)].append(term)
         # 簡単化
-        func_listss = [
-            [QM(func_list) for func_list in func_lists]
-            for func_lists in func_listss
-            ]
+        if kwargs['reduce']:
+            func_listss = [
+                [QM(func_list) for func_list in func_lists]
+                for func_lists in func_listss
+                ]
         # funcに変換
         pbcn_model = [
             [
@@ -74,13 +76,22 @@ def def_f(mode, **kwargs):
                         ) if isinstance(func_list,list) else str(bool(func_list))
                     for func_list in func_lists
                     ],
-                [0.3,0.7] if len(func_lists)==2 else [1]
+                #[0.3,0.7] if len(func_lists)==2 else [1]
                 ]
             for func_lists in func_listss
             ]
+        # 確率を付与
+        for transition_rule in pbcn_model:
+            if len(transition_rule[0])==2:
+                rand = np.random.randint(1,10) / 10     # 0.1, 0.2,..., 0.9
+                transition_rule.append([rand, 1-rand])
+            else:
+                transition_rule.append([1])
         
         info = {'pbcn_model': pbcn_model}
         
+    elif mode=='random2':
+        pass
     
     
     
@@ -107,12 +118,15 @@ def make_scalefree(n, gamma):
 if __name__ == '__main__':
     import drawset
     #info = def_f('import', name='pbcn_model_28')
-    info = def_f('random', n=3, gamma=2.5)
-    info = {'pbcn_model': [[['x[0] and x[1] and x[2] or x[1] and not x[2] and not x[0] or x[2] and not x[0] and not x[1]', 'x[0] and x[1] and x[2] or not x[2] and not x[0] or not x[0] and not x[1]'], [0.3, 0.7]], [['x[0] or x[2]', 'x[0] or x[2] or not x[1]'], [0.3, 0.7]], [['x[2] and not x[0] or x[1]'], [1]]]}
+    #info = def_f('random', n=3, gamma=2.5)
+    info = def_f('random', n=10, gamma=8, reduce=False)
+    #info = {'pbcn_model': [[['x[0] and x[1] and x[2] or x[1] and not x[2] and not x[0] or x[2] and not x[0] and not x[1]', 'x[0] and x[1] and x[2] or not x[2] and not x[0] or not x[0] and not x[1]'], [0.3, 0.7]], [['x[0] or x[2]', 'x[0] or x[2] or not x[1]'], [0.3, 0.7]], [['x[2] and not x[0] or x[1]'], [1]]]}
     
-    transition_list = PBCN.pbn_model_to_transition_list(info['pbcn_model'])
-    drawset.transition_diagram(transition_list, 'temp')
+    pbcn_model = info['pbcn_model']
+    #transition_list = PBCN.pbn_model_to_transition_list(info['pbcn_model'])
+    #drawset.transition_diagram(transition_list, 'temp')
     
+    num = [len(transition_rule[0]) for transition_rule in pbcn_model]
 
 
 

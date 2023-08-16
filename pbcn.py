@@ -275,9 +275,7 @@ class gym_PBCN(PBCN):
         self.target_x = np.array(info['target_x'])
         super().__init__(self.pbcn_model)
         
-        self.observation_size = self.N
         self.observation_shape = (self.N,)
-        self.action_size = self.M
         self.action_shape = (self.M,)
         
         #self.count = 0      # 遷移回数
