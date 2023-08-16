@@ -183,7 +183,7 @@ class PBCN:
         """
         N,M = PBCN.get_NM(pbn_model)
         assert M==0
-        x_space = np.fliplr(np.array(list(itertools.product([0,1], repeat=N)), dtype=np.bool_))
+        x_space = np.array(list(itertools.product([1,0], repeat=N)), dtype=np.bool_)
         # 遷移パターンを列挙
         transition_patterns = list(
             zip(
@@ -259,8 +259,8 @@ class PBCN:
         # 最も大きい数字を検知する
         N = max(map(int,set(re.findall(r'x\[(\d+)\]', content))), default=-1) + 1
         M = max(map(int,set(re.findall(r'u\[(\d+)\]', content))), default=-1) + 1
-        x_space = np.fliplr(np.array(list(itertools.product([0,1], repeat=N)), dtype=np.bool_))
-        u_space = np.fliplr(np.array(list(itertools.product([0,1], repeat=M)), dtype=np.bool_))
+        x_space = np.array(list(itertools.product([1,0], repeat=N)), dtype=np.bool_)
+        u_space = np.array(list(itertools.product([1,0], repeat=M)), dtype=np.bool_)
         
         for x,u in itertools.product(x_space,u_space):
             assert eval(func1) == eval(func2)
@@ -269,8 +269,11 @@ class PBCN:
 
     
 class gym_PBCN(PBCN):
-    def __init__(self, name):
-        info = PBCN.load_pbcn_info(name)
+    def __init__(self, name_or_info):
+        if isinstance(name_or_info,str):
+            info = PBCN.load_pbcn_info(name_or_info)
+        else:
+            info = name_or_info
         self.pbcn_model = info['pbcn_model']
         self.target_x = np.array(info['target_x'])
         super().__init__(self.pbcn_model)
