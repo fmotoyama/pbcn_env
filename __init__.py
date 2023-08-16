@@ -6,3 +6,4 @@ Created on Sun Jan 22 22:58:38 2023
 """
 
 from .pbcn import PBCN, gym_PBCN
+from .def_func import def_f
