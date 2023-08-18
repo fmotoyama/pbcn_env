@@ -239,11 +239,11 @@ class PBCN:
     
     
     @staticmethod
-    def save_pbcn_info(**kwargs):
+    def save_pbcn_info(info):
         """txtファイルとして出力する"""
         #with open('data/pbcn_model.txt', mode='w') as f:
         with open('pbcn_model.txt', mode='w') as f:
-            f.write(str(kwargs))
+            f.write(str(info))
     
     @staticmethod
     def load_pbcn_info(name = 'pbcn_model'):

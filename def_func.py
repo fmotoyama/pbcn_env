@@ -130,6 +130,8 @@ def def_f(mode, **kwargs):
         info = random1(**kwargs)
     elif mode == 'random2':
         info = random2(**kwargs)
+    else:
+        raise Exception
     return info
 
 def make_scalefree(n, gamma):
