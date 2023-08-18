@@ -34,10 +34,13 @@ def QM(f):
     # fの各項をset型に変換
     ## 項内の同じ変数を削除
     f = [set(term) for term in f]
-    ## 符号違いの変数をもつ項を削除
+    ## 符号違いの変数をもつ項を削除(その項は0を意味する)
     f = [term for term in f if len(set(map(abs,term))) == len(term)]
     if f == []:
         return 0
+    ## 重複する項を削除
+    f = get_unique_list(f)
+    
     
     
     #fを主加法標準展開
@@ -125,415 +128,288 @@ def QM(f):
 
 
 
-
 class Node(NamedTuple):
     v: int
-    n0: Union['Node', 'Leaf']
-    n1: Union['Node', 'Leaf']
-    neg: bool               # 0枝が否定枝のときTrue
+    n0: 'Node'
+    n1: 'Node'
     hash: int
-
 class Leaf(NamedTuple):
-    # 終端1を表す葉ノード
-    hash = hash((1,))
-
-# 本来の根ノードの上に否定枝をつけるために使用
-class Root(NamedTuple):
-    node: Union[Node, Leaf] # Nodeオブジェクト
-    neg: bool               # nodeに否定枝がつくときTrue
+    value: int
+    hash: int
 
 class BDD:
     """
     n,node  : Nodeオブジェクト 同じ意味のオブジェクトは1つのみ
     h,hash  : 各ノードに割り当てられたハッシュ
-    r,root  : Rootオブジェクト
-    neg     : 否定枝の有無
-    sign    : 符号 (= not neg)
     """
     def __init__(self):
-        self.table = {}                     # table[node(hash)] = (v,n0,v1)
-        self.table_AP = defaultdict(dict)   # table_AP[op][hash] = ({n0,n1},演算結果) 
-        self.leaf = Leaf()
-        self.table[self.leaf.hash] = self.leaf
-
-    
-    def _RegisterNode(self, v, n0, n1, neg, diff=0):
-        """
-        ノード要素からハッシュ値計算　共有判定　ハッシュ登録　ノード決定
-        この関数はGetNode()でのみ使用される
-        ノードは否定枝BDDの規則を満たしていることが前提
-        """
-        h = hash((v, n0.hash, n1.hash, neg))
-        if diff:
-            h = h ^ diff
-        
-        # 重複検知 衝突回避
-        node_found = self.table.get(h)
-        node_new = Node(v,n0,n1,neg,h)
-        if node_found:
-            if node_new != node_found:
-                print(f'_GetNodeHash: new:{node_new}, exist:{node_found} collided')
-                node_found = self._RegisterNode(v, n0, n1, diff+1)
-            return node_found
-        self.table[h] = node_new
-        return node_new
+        self.table = dict()
+        self.table_AP = defaultdict(dict)   # table_AP[op][(nA,nB)] = 演算結果  ※(nA,nB)の順序を気を付ける
+        self.leaf0 = Leaf(0,hash((0,)))
+        self.leaf1 = Leaf(1,hash((1,)))
+        self.table[self.leaf0.hash] = self.leaf0
+        self.table[self.leaf1.hash] = self.leaf1
     
     
-    def _SearchAP(self, op, rA, rB, order:bool, diff=0):
-        """
-        apply演算のハッシュ値計算　演算結果の検索
-        この関数はAP()でのみ使用される
-        order : rA,rBの順序が固定か否かのbool
-        """
-        if order:
-            h = hash((rA.node.hash,rA.neg,rB.node.hash,rB.neg))
-            # 8byte,正数にする
-            h = h & 0xffff_ffff_ffff_ffff
-        else:
-            h1 = hash((rA.node.hash,rA.neg)) & 0xffff_ffff_ffff_ffff
-            h2 = hash((rB.node.hash,rB.neg)) & 0xffff_ffff_ffff_ffff
-            h = h1  ^ h2
-        
-        if diff:
-            h = h ^ diff
-        
-        # 重複検知 衝突回避
-        results_found = self.table_AP[op].get(h)
-        pattern = (rA.node.hash,rA.neg,rB.node.hash,rB.neg) if order else {(rA.node,rA.neg),(rB.node,rB.neg)}
-        if results_found:
-            rA_found, rB_found = results_found[0]
-            pattern_found = (rA_found.node.hash,rA_found.neg,rB_found.node.hash,rB_found.neg) if order else {(rA_found.node,rA_found.neg),(rB_found.node,rB_found.neg)}
-            if pattern != pattern_found:
-                print(f'_SearchAP: "{op}" collided')
-                return self._SearchAP(op, rA, rB, diff+1)
-            return results_found[1], h
-        return None, h
-    
-    
-    
-    def GetNode(self, v, r0:Root, r1:Root):
-        """
-        0枝のみ否定枝となりうる　葉0は葉1へ向かう否定枝で表現
-        """
+    def GetNode(self, v, n0, n1):
         # 削除規則
-        if r0.node.hash == r1.node.hash and r0.neg == r1.neg:
-            return r0
+        if n0 == n1:
+            return n0
         # 共有規則
-        if r1.neg:
-            # r1に否定枝がついているとき、子ノードの符号が反転した解を求め、最後に親ノードの符号を反転する
-            node = self._RegisterNode(v, r0.node, r1.node, not r0.neg)
-            return Root(node, True)
+        h = hash((v,n0.hash,n1.hash))
+        n = Node(v, n0, n1, h)
+        n_found = self.table.get(h)
+        if n_found:
+            return n_found
         else:
-            node = self._RegisterNode(v, r0.node, r1.node, r0.neg)
-            return Root(node, False)
+            self.table[h] = n
+            return n
     
     
-    def GetUnitNode(self, v, neg):
-        r0 = Root(self.leaf, not neg)
-        r1 = Root(self.leaf, neg)
-        return self.GetNode(v, r0, r1)
-        
-    def GetLeafNode(self, neg):
-        return Root(self.leaf, neg)
-    
-    @staticmethod
-    def FlipNode(root):
-        return Root(root.node, not root.neg)
+    def GetUnitNode(self, v):
+        return self.GetNode(v, self.leaf0, self.leaf1)
     
     
-    def AP(self,op,rA,rB):
-        def OR(rA,rB):
-            order = False
-            # 掘り進む必要がないケース
-            if rA.node.hash == rB.node.hash:
-                if rA.neg == rB.neg:
-                    return rA                       # (fA,fA), (-fA,-fA)
-                else:
-                    return Root(self.leaf,False)    # (fA,-fA), (-fA,fA)
-            if type(rA.node) is Leaf:
-                if rA.neg:
-                    return rB                       # (0,*)
-                else:
-                    return Root(self.leaf,False)    # (1,*)
-            if type(rB.node) is Leaf:
-                if rB.neg:
-                    return rA                       # (*,0)
-                else:
-                    return Root(self.leaf,False)    # (*,1)
-            
-            # 過去の計算結果を用いる
-            result_found,h = self._SearchAP('OR',rA,rB,order)
-            if result_found:
-                return result_found
-            # ド・モルガンの法則 fA+fB = ~(~fA*~fB)
-            rA_fliped = Root(rA.node, not rA.neg)
-            rB_fliped = Root(rB.node, not rB.neg)
-            result_found,_ = self._SearchAP('AND',rA_fliped,rB_fliped,order)
-            if result_found:
-                return Root(result_found.node, not result_found.neg)
-            
-            # 再帰的にシャノン展開
-            vA,nA0,nA1 = rA.node[:3]
-            vB,nB0,nB1 = rB.node[:3]
-            rA0 = Root(nA0, rA.neg ^ rA.node.neg)
-            rA1 = Root(nA1, rA.neg)
-            rB0 = Root(nB0, rB.neg ^ rB.node.neg)
-            rB1 = Root(nB1, rB.neg)
-            
-            if vA<vB:
-                r=self.GetNode(vA,OR(rA0,rB),OR(rA1,rB))
-            elif vA>vB:
-                r=self.GetNode(vB,OR(rA,rB0),OR(rA,rB1))
-            elif vA==vB:
-                r=self.GetNode(vA,OR(rA0,rB0),OR(rA1,rB1))
-            
-            self.table_AP[op][h] = ([rA,rB], Root(r.node,r.neg))
-            return r
+    def OR(self,nA,nB):
+        # 掘り進む必要がないケース
+        if nA == self.leaf1 or nB == self.leaf1:
+            return self.leaf1
+        if nA == nB or nB == self.leaf0:
+            return nA
+        if nA == self.leaf0:
+            return nB
+        
+        # 過去の計算結果を用いる
+        key = hash(frozenset({nA.hash,nB.hash}))  # 順序を気にしない
+        result_found = self.table_AP['OR'].get(key)
+        if result_found:
+            return result_found
+        
+        # 再帰的にシャノン展開
+        vA,nA0,nA1 = nA[:3]
+        vB,nB0,nB1 = nB[:3]
+        if vA<vB:
+            r=self.GetNode(vA,self.OR(nA0,nB),self.OR(nA1,nB))
+        elif vA>vB:
+            r=self.GetNode(vB,self.OR(nA,nB0),self.OR(nA,nB1))
+        elif vA==vB:
+            r=self.GetNode(vA,self.OR(nA0,nB0),self.OR(nA1,nB1))
+        
+        self.table_AP['OR'][key] = r
+        return r
         
         
-        def AND(rA,rB):
-            order = False
-            # 掘り進む必要がないケース
-            if rA.node.hash == rB.node.hash:
-                if rA.neg == rB.neg:
-                    return rA                       # (fA,fA), (-fA,-fA)
-                else:
-                    return Root(self.leaf,True)     # (fA,-fA), (-fA,fA)
-            if type(rA.node) is Leaf:
-                if rA.neg:
-                    return Root(self.leaf,True)     # (0,*)
-                else:
-                    return rB                       # (1,*)
-            if type(rB.node) is Leaf:
-                if rB.neg:
-                    return Root(self.leaf,True)     # (*,0)
-                else:
-                    return rA                       # (*,1)
-            
-            # 過去の計算結果を用いる
-            result_found,h = self._SearchAP('AND',rA,rB,order)
-            if result_found:
-                return result_found
-            # ド・モルガンの法則
-            rA_fliped = Root(rA.node, not rA.neg)
-            rB_fliped = Root(rB.node, not rB.neg)
-            result_found,_ = self._SearchAP('OR',rA_fliped,rB_fliped,order)
-            if result_found:
-                return Root(result_found.node, not result_found.neg)
-            
-            # 再帰的にシャノン展開
-            vA,nA0,nA1 = rA.node[:3]
-            vB,nB0,nB1 = rB.node[:3]
-            rA0 = Root(nA0, not rA.node.neg if rA.neg else rA.node.neg)
-            rA1 = Root(nA1, rA.neg)
-            rB0 = Root(nB0, not rB.node.neg if rB.neg else rB.node.neg)
-            rB1 = Root(nB1, rB.neg)
-            
-            if vA<vB:
-                r=self.GetNode(vA,AND(rA0,rB),AND(rA1,rB))
-            elif vA>vB:
-                r=self.GetNode(vB,AND(rA,rB0),AND(rA,rB1))
-            elif vA==vB:
-                r=self.GetNode(vA,AND(rA0,rB0),AND(rA1,rB1))
-            
-            self.table_AP[op][h] = ([rA,rB], Root(r.node,r.neg))
-            return r
+    def AND(self,nA,nB):
+        # 掘り進む必要がないケース
+        if nA == self.leaf0 or nB == self.leaf0:
+            return self.leaf0
+        if nA == nB or nB == self.leaf1:
+            return nA
+        if nA == self.leaf1:
+            return nB
         
+        # 過去の計算結果を用いる
+        key = hash(frozenset({nA.hash,nB.hash}))  # 順序を気にしない
+        result_found = self.table_AP['AND'].get(key)
+        if result_found:
+            return result_found
         
-        #----------AP()の処理----------
-        if op=='OR': return OR(rA,rB)
-        elif op=='AND': return AND(rA,rB)
+        # 再帰的にシャノン展開
+        vA,nA0,nA1 = nA[:3]
+        vB,nB0,nB1 = nB[:3]
+        if vA<vB:
+            r=self.GetNode(vA,self.AND(nA0,nB),self.AND(nA1,nB))
+        elif vA>vB:
+            r=self.GetNode(vB,self.AND(nA,nB0),self.AND(nA,nB1))
+        elif vA==vB:
+            r=self.GetNode(vA,self.AND(nA0,nB0),self.AND(nA1,nB1))
+        
+        self.table_AP['AND'][key] = r
+        return r
+        
+    def NOT(self,n):
+        if isinstance(n,Leaf):
+            if n == self.leaf0:
+                return self.leaf1
+            else:
+                return self.leaf0
+        # 過去の計算結果を用いる
+        result_found = self.table_AP['NOT'].get(n.hash)
+        if result_found:
+            return result_found
+        # 再帰的に計算
+        r = self.GetNode(n.v,self.NOT(n.n0),self.NOT(n.n1))
+        
+        self.table_AP['NOT'][n.hash] = r
+        return r
         
     
             
     ####################
+    """
+    #未点検
     @staticmethod
     def GetBDD(root):
+        # not枝のないbddをlist型で返す !!!ノードの共有が表現されない
         def scan(n,sign):
             # ノードnのbddを返す
-            if type(n) is Leaf:
+            if isinstance(n,Leaf):
                 return int(sign)
             v,n0,n1 = n[:3]
             return [v, scan(n0, not sign if n.neg else sign), scan(n1, sign)]
         return scan(root.node, not root.neg)
+    """
+    
+    #tableの仕様変更後、未点検
+    @staticmethod
+    def GetBDDdict(node):
+        # bddをdict型で返す
+        if isinstance(node,Leaf):
+            return node.value
+        bdd_dict = dict()   # hash: [v,hash0,hash1]
+        def scan(node):
+            if isinstance(node,Leaf):
+                return
+            n0_hash = node.n0.value if isinstance(node.n0,Leaf) else node.n0.hash
+            n1_hash = node.n1.value if isinstance(node.n1,Leaf) else node.n1.hash
+            bdd_dict[node.hash] = [node.v, n0_hash, n1_hash]
+            scan(node.n0)
+            scan(node.n1)
+        scan(node)
+        return bdd_dict
     
     
     
-    def AssignConst(self,root,cdict):  #cdict[v]=True/False
+    def AssignConst(self,node,cdict):  #cdict[v]=True/False
         """各変数に定数を代入した結果のbddを返す"""
-        node = root.node
-        if type(node) is Leaf:
-            return root
+        if isinstance(node,Leaf):
+            return node
+        
         const = cdict.get(node.v)
-        if const == None:
-            root2 = self.GetNode(
+        if const is None:
+            r = self.GetNode(
                 node.v,
                 self.AssignConst(node.n0,cdict),
                 self.AssignConst(node.n1,cdict)
                 )
-            root2.neg = root.neg ^ root2.neg
-        elif const == False:
-            # 0枝
-            root_temp = Root(node.n0, root.neg ^ root.node.neg)
-            root2 = self.AssignConst(root_temp,cdict)
-        elif const == True:
-            # 1枝
-            root_temp = Root(node.n1, root.neg)
-            root2 = self.AssignConst(root_temp,cdict)
-        return root2
+        else:
+            assert const==0 or const==1
+            r = self.AssignConst(node.n1,cdict) if const else self.AssignConst(node.n0,cdict)
+        return r
     
     
     @staticmethod
-    def AssignConstAll(root,cdict):
+    def AssignConstAll(node,cdict):
         """BDDのすべての変数の値が与えられているとき、BDDの出力を求める"""
-        while type(root.node) != Leaf:
-            const = cdict[root.node.v]
-            if const == False:
-                neg = root.neg ^ root.node.neg
-            else:
-                neg = root.neg
-            n = root.node.n0 if const==0 else root.node.n1
-            root = Root(n, neg)
-        return root
+        if isinstance(node,Leaf):
+            return node.value
+        while isinstance(node,Node):
+            node = node.n1 if cdict[node.v] else node.n0
+        return node.value
 
 
     @staticmethod
-    def GetV(root):
+    def GetV(node):
         """bddで使われている変数を列挙する"""
         V = []
-        
         def scan(node):
-            if type(node) is Leaf:
+            if isinstance(node,Leaf):
                 return
             V.append(node.v)
             scan(node.n0)
             scan(node.n1)
-        
-        scan(root.node)
+        scan(node)
         return set(V)
 
 
-    def EnumPath(self, root, shorten=False, check=False):
-        """1へ到達するパスを全て求める"""
-        assert not (shorten==True and check==True)
-        V_ordered = sorted(self.GetV(root))
+    def EnumPath(self, node, shorten=False, check=False):
+        """1へ到達するパス（1を出力する状態）を全て求める"""
+        if isinstance(node,Leaf):
+            return
+        V_ordered = sorted(self.GetV(node))
         l = len(V_ordered)
         
-        def scan(node,sign):
-            # nodeからsignに到達するための入力の組み合わせを求める
-            v,node0,node1 = node[:3]
-            id_v = V_ordered.index(v)
-            
-            # 0枝
-            if type(node0) is Leaf:
-                # 枝先が終端のとき
-                if sign == (not node.neg):
-                    state_0 = np.full((1, l), -1, dtype = 'i1')
-                    state_0[:,id_v] = 0
-                else:
-                    state_0 = np.empty((0,l), dtype = 'i1')
-            else:
-                state_0 = scan(node0, sign==(not node.neg))
-                state_0[:,id_v] = 0
-            # 1枝
-            if type(node1) is Leaf:
-                # 枝先が終端のとき
-                if sign:
-                    state_1 = np.full((1, l), -1, dtype = 'i1')
-                    state_1[:,id_v] = 1
-                else:
-                    state_1 = np.empty((0,l), dtype = 'i1')
-            else:
-                state_1 = scan(node1, sign)
-                state_1[:,id_v] = 1
-            
-            return np.concatenate([state_0, state_1])
-            
+        def scan(node):
+            # nodeから1へ到達するための入力の組み合わせを求める
+            id_v = V_ordered.index(node.v)
+            states = []
+            for branch,node_c in enumerate([node.n0,node.n1]):
+                if node_c == self.leaf1:
+                    states_sub = np.full((1, l), -1, dtype = 'i1')
+                    states_sub[:,id_v] = branch
+                    states.append(states_sub)
+                elif isinstance(node_c,Node):
+                    states_sub = scan(node_c)
+                    states_sub[:,id_v] = branch
+                    states.append(states_sub)
+            return np.concatenate(states)
         
-        states = scan(root.node, not root.neg)
+        states = scan(node)
         
         if not shorten or check:
             # -1の部分を書き下す
-            num_clos = 0
-            for state in states:
-                num_clos += 2** np.count_nonzero(state==-1)
-            states2 = np.empty((num_clos,l), dtype = 'i1')
-            row = 0
+            states2 = []
             for state in states:
                 cols = np.where(state==-1)[0]
-                num_clos = 2**len(cols)
-                state2 = np.tile(state, (num_clos,1))
-                for i,col in enumerate(cols):
-                    state2[:,col] = ([0]*2**i + [1]*2**i) * 2**(len(cols)-i-1)
-                states2[row:row+num_clos] = state2
-                row += num_clos
-            states = states2
+                states2_sub = np.tile(state, (2**len(cols),1))   # stateを縦に並べる
+                states2_sub[:,cols] = list(itertools.product([1,0], repeat=len(cols)))
+                states2.append(states2_sub)
+            states2 = np.concatenate(states2)
                 
-        if check:
-            for state in states:
-                cdict = {v:value for v,value in zip(V_ordered,state)}
-                assert self.AssignConstAll(root,cdict)
+            if check:
+                # 求めたパスで1へたどり着くか検査
+                for state in states2:
+                    cdict = {v:value for v,value in zip(V_ordered,state)}
+                    assert self.AssignConstAll(node,cdict)
+            if not shorten:
+                states = states2
         
         return states,V_ordered
     
     
-    def CountPath(self, root, V_ordered=None):
+    def CountPath(self, node, V_ordered=None):
         """
         1へ到達するパスの本数を数える
         V_orderedのうちbddに登場していない変数のパターンも数える
         V_ordered=Noneのときは単純にbddのパス数を数える
         """
         if V_ordered == None:
-            def scan(node,sign):
-                if type(node) is Leaf:
-                    return int(sign)
-                return scan(node.n0,sign==(not node.neg)) + scan(node.n1,sign)
-            
-            return scan(root.node, not root.neg)
+            def scan(node):
+                if isinstance(node,Leaf):
+                    return node.value
+                return scan(node.n0) + scan(node.n1)
+            return scan(node)
             
         else:
             l = len(V_ordered)
-            def scan(node,sign):
-                if type(node) is Leaf:
-                    return int(sign), l
+            def scan(node):
+                if isinstance(node,Leaf):
+                    return node.value, l
+                # 子ノードとの間で消えているノード数に応じてcountを増やす
                 id_v = V_ordered.index(node.v)
-                count0, id_0 = scan(node.n0, sign==(not node.neg))
+                count0, id_0 = scan(node.n0)
                 count0 *= 2 ** (id_0 - id_v - 1)
-                count1, id_1 = scan(node.n1, sign)
+                count1, id_1 = scan(node.n1)
                 count1 *= 2 ** (id_1 - id_v - 1)
                 return count0+count1, id_v
             
-            count, id_ = scan(root.node, not root.neg)
+            count, id_ = scan(node)
             count *= 2 ** (id_)
             return count
     
-    def PickPath(self,root):
-        """パスを1本示す"""
-        path = {}
-        def scan(node,sign):
-            # 終端1に到達するパスを1本見つける
-            if type(node) is Leaf:
-                return sign
-            
+    def PickPath(self,node):
+        """ランダムにパスを1本示す"""
+        if isinstance(node,Leaf):
+            return
+        path = dict()
+        while node != self.leaf1:
             edge = np.random.randint(0,2)
-            if edge == 0:
-                if scan(node.n0, sign==(not node.neg)):
-                    path[node.v] = 0
-                    return 1
-                else:
-                    scan(node.n1, sign)
-                    path[node.v] = 1
-                    return 1
-            elif edge == 1:
-                if scan(node.n1, sign):
-                    path[node.v] = 1
-                    return 1
-                else:
-                    scan(node.n0, sign==(not node.neg))
-                    path[node.v] = 0
-                    return 1
-        
-        scan(root.node, not root.neg)
+            if node[1+edge] == self.leaf0:
+                path[node.v] = 1-edge
+                node = node[1+1-edge]
+            else:
+                path[node.v] = edge
+                node = node[1+edge]
         return path
 
 
@@ -546,6 +422,8 @@ if __name__ == '__main__':
     
     f0 = [[1,-1]]
     f0_ = QM(f0)
+    f1 = [[1,2],[-3],[2,1]]
+    f1_ = QM(f1)
     #f1 = [[-1,-2],[-1,2],[1,-2],[1,2]]
     #f1_ = QM(f1)
     
