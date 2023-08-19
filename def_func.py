@@ -7,7 +7,6 @@ Created on Wed Jan  4 13:39:02 2023
 import itertools, copy
 import numpy as np
 
-from pbcn import PBCN
 from utils import QM
 
 def def_f(mode, **kwargs):
@@ -191,6 +190,7 @@ def add_pinning_node(pbn_model):
 
 
 if __name__ == '__main__':
+    import pbcn
     import drawset
     #info = def_f('import', name='pbcn_model_28')
     #info = def_f('random', n=3, gamma=2.5)

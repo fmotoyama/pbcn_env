@@ -189,7 +189,7 @@ def pbn_model_to_transition_list(pbn_model):
             map(np.prod, itertools.product(*[transition_rule[1] for transition_rule in pbn_model]))
             )
         )
-    assert sum(transition_pattern[1] for transition_pattern in transition_patterns) == 1
+    assert abs(sum(transition_pattern[1] for transition_pattern in transition_patterns) - 1) < 1e-05    #  float値の一致判定
     
     # 遷移パターンごとの遷移を計算
     transition_table = dict()
