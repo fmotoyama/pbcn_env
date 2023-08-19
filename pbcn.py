@@ -236,14 +236,14 @@ def get_NM(pbcn_model, check=False):
     return N,M
 
 
-def save_pbcn_info(info):
+def save_pbcn_info(info: dict, path='pbcn_model.txt'):
     """txtファイルとして出力する"""
     #with open('data/pbcn_model.txt', mode='w') as f:
-    with open('pbcn_model.txt', mode='w') as f:
+    with open(path, mode='w') as f:
         f.write(str(info))
 
-def load_pbcn_info(name = 'pbcn_model'):
-    with open(f'data/{name}.txt', mode='r', encoding="utf-8") as f:
+def load_pbcn_info(path='data/pbcn_model.txt'):
+    with open(path, mode='r', encoding="utf-8") as f:
         l = f.readline()
     #return ast.literal_eval(l)
     return eval(l)
@@ -274,7 +274,7 @@ def is_controlled(pbn_model, target_x):
     # 目標状態から遷移前をさかのぼる
     targets = {''.join(str(int(val)) for val in target_x)}  # 探索対象
     while targets:
-        targets2 = {}
+        targets2 = set()
         for x in targets:
             xs_parent = transition_list_inv.pop(x, None)    # 一度探索した状態は表から削除
             if xs_parent:
@@ -313,7 +313,7 @@ class gym_PBCN():
         x = self.x
         u = np.array(action, dtype=np.bool_)
         next_x = np.array([
-            self.calc(transition_rule, x, u) for transition_rule in self.pbcn_model
+            calc(transition_rule, x, u) for transition_rule in self.pbcn_model
             ])
         
         if np.all(next_x == self.target_x):
