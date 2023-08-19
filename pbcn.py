@@ -7,6 +7,7 @@ Created on Fri Dec 16 20:20:34 2022
 import re, itertools, copy
 import matplotlib.pyplot as plt
 import numpy as np
+from collections import defaultdict
 
 import warnings
 warnings.simplefilter('error')
@@ -176,7 +177,7 @@ def embed_controller(pbcn_model, controller, minimum=False):
 
 def pbn_model_to_transition_list(pbn_model):
     """
-    transition_table[x] = [[x1,x2,...],[p1,p2,...]]
+    transition_list[x] = [[x1,x2,...],[p1,p2,...]]
     type(x) is str
     """
     n = len(pbn_model)
@@ -192,7 +193,7 @@ def pbn_model_to_transition_list(pbn_model):
     assert abs(sum(transition_pattern[1] for transition_pattern in transition_patterns) - 1) < 1e-05    #  float値の一致判定
     
     # 遷移パターンごとの遷移を計算
-    transition_table = dict()
+    transition_list = dict()
     for x in x_space:
         next_xs = np.array(
             [[eval(func,{'x':x}) for func in funcs] for funcs,_ in transition_patterns],
@@ -210,9 +211,9 @@ def pbn_model_to_transition_list(pbn_model):
         
         x = ''.join(str(int(val)) for val in x)
         unique_next_xs = [''.join(str(int(val)) for val in unique_next_x) for unique_next_x in unique_next_xs]
-        transition_table[x] = [unique_next_xs, probs]
+        transition_list[x] = [unique_next_xs, probs]
         
-    return transition_table
+    return transition_list
     
 
 def get_NM(pbcn_model, check=False):
@@ -260,6 +261,27 @@ def is_same_func(func1, func2):
         assert eval(func1) == eval(func2)
     return True
 
+
+def is_controlled(pbn_model, target_x):
+    """全ての状態がtarget_xのbasinであることを確認する"""
+    transition_list = pbn_model_to_transition_list(pbn_model)
+    # 自分の遷移前を表現する辞書を作成
+    transition_list_inv = defaultdict(set)
+    for x,temp in transition_list.items():
+        for next_x in temp[0]:
+            transition_list_inv[next_x].add(x)
+    
+    # 目標状態から遷移前をさかのぼる
+    targets = {''.join(str(int(val)) for val in target_x)}  # 探索対象
+    while targets:
+        targets2 = {}
+        for x in targets:
+            xs_parent = transition_list_inv.pop(x, None)    # 一度探索した状態は表から削除
+            if xs_parent:
+                targets2 = targets2 | xs_parent
+        targets = targets2
+        
+    return transition_list_inv
 
     
 class gym_PBCN():
@@ -351,6 +373,7 @@ if __name__ == '__main__':
     [is_same_func(controller_func,controller_func_minimum) for controller_func,controller_func_minimum in zip(controller_funcs,controller_funcs_minimum)]
     pbn_model = embed_controller(pbcn_model, controller, minimum=True)
     transition_list = pbn_model_to_transition_list(pbn_model)
+    is_controlled(pbn_model, target_x)
     drawset.transition_diagram(transition_list)
     
     
