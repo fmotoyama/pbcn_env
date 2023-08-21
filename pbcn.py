@@ -46,7 +46,7 @@ def calc(transition_rule: list, x: np.ndarray, u: np.ndarray=None):
 
 def controller_to_func(n, controller: np.ndarray):
     """express the controller as functions"""
-    m = len(controller)
+    m = int(np.log2(len(controller)))
     controller_funcs = [[] for _ in range(m)]
     for x_idx in range(2**n):
         u_idxs = np.where(idx2state(controller[x_idx], m))[0]   # controller_funcに項を追加するuのindex
@@ -67,7 +67,7 @@ def controller_to_func(n, controller: np.ndarray):
 
 def controller_to_func_minimum(n, controller):
     """QM法"""
-    m = len(controller)
+    m = int(np.log2(len(controller)))
     func_lists = [[] for _ in range(m)]
     for x_idx in range(2**n):
         u_idxs = np.where(idx2state(controller[x_idx], m))[0]   # controller_funcに項を追加するuのindex
@@ -126,7 +126,7 @@ def minimize_func(func: str):
 BDD = BDD()
 def get_ver_from_controller(n, controller):
     # find the variables used by the controller, using BDD
-    m = len(controller)
+    m = int(np.log2(len(controller)))
     # 積和標準形をつくる
     func_lists = [[] for _ in range(m)]
     for x_idx in range(2**n):
@@ -165,7 +165,7 @@ def get_ver_from_controller(n, controller):
 def embed_controller(pbcn_model, controller, minimum=False):
     """embed controller in pbcn_model"""
     n = len(pbcn_model)
-    m = len(controller)
+    m = int(np.log2(len(controller)))
     controller_func = controller_to_func_minimum(n,controller) if minimum is True else controller_to_func(n, controller)
     pbn_model = copy.deepcopy(pbcn_model)
     for transition_rule in pbn_model:
@@ -364,7 +364,7 @@ if __name__ == '__main__':
     
     env = gym_PBCN('pbcn_model_pinning_3 (2)')
     n = len(pbcn_model)
-    m = len(controller)
+    m = int(np.log2(len(controller)))
     x_space = np.array(list(itertools.product([1,0], repeat=n)), dtype=np.bool_)
     u_space = np.array(list(itertools.product([1,0], repeat=m)), dtype=np.bool_)
         
