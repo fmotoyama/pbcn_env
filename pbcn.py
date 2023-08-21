@@ -175,28 +175,29 @@ def embed_controller(pbcn_model, controller, minimum=False):
     return pbn_model
 
 
-def pbn_model_to_transition_list(pbn_model):
+def pbcn_model_to_transition_list(pbcn_model, controller=None):
     """
     transition_list[x] = [[x1,x2,...],[p1,p2,...]]
     type(x) is str
+    pbcn_model,controllerを与えた場合とpbn_modelを与えた場合で結果は同じはず
     """
-    n = len(pbn_model)
-    #assert M==0
-    x_space = np.array(list(itertools.product([1,0], repeat=n)), dtype=np.bool_)
+    n = len(pbcn_model)
+    u_space = None if controller is None else np.array(list(itertools.product([1,0], repeat=len(controller))), dtype=np.bool_)
     # 遷移パターンを列挙
     transition_patterns = list(
         zip(
-            itertools.product(*[transition_rule[0] for transition_rule in pbn_model]),
-            map(np.prod, itertools.product(*[transition_rule[1] for transition_rule in pbn_model]))
+            itertools.product(*[transition_rule[0] for transition_rule in pbcn_model]),
+            map(np.prod, itertools.product(*[transition_rule[1] for transition_rule in pbcn_model]))
             )
         )
     assert abs(sum(transition_pattern[1] for transition_pattern in transition_patterns) - 1) < 1e-05    #  float値の一致判定
     
     # 遷移パターンごとの遷移を計算
     transition_list = dict()
-    for x in x_space:
+    for x_idx,x in enumerate(itertools.product([1,0], repeat=n)):
+        u = None if controller is None else u_space[controller[x_idx]]
         next_xs = np.array(
-            [[eval(func,{'x':x}) for func in funcs] for funcs,_ in transition_patterns],
+            [[eval(func,{'x':x,'u':u}) for func in funcs] for funcs,_ in transition_patterns],
             dtype=np.bool_
             )
         # 遷移先が同じものを統合する
@@ -215,6 +216,8 @@ def pbn_model_to_transition_list(pbn_model):
         
     return transition_list
     
+
+
 
 def get_NM(pbcn_model, check=False):
     content = ' '.join(' '.join(func for func in transition_rule[0]) for transition_rule in pbcn_model)
@@ -242,8 +245,8 @@ def save_pbcn_info(info: dict, path='pbcn_model.txt'):
     with open(path, mode='w') as f:
         f.write(str(info))
 
-def load_pbcn_info(path='data/pbcn_model.txt'):
-    with open(path, mode='r', encoding="utf-8") as f:
+def load_pbcn_info(name='pbcn_model'):
+    with open(f'data/{name}.txt', mode='r', encoding="utf-8") as f:
         l = f.readline()
     #return ast.literal_eval(l)
     return eval(l)
@@ -262,9 +265,8 @@ def is_same_func(func1, func2):
     return True
 
 
-def is_controlled(pbn_model, target_x):
+def is_controlled(transition_list, target_x):
     """全ての状態がtarget_xのbasinであることを確認する"""
-    transition_list = pbn_model_to_transition_list(pbn_model)
     # 自分の遷移前を表現する辞書を作成
     transition_list_inv = defaultdict(set)
     for x,temp in transition_list.items():
@@ -347,6 +349,7 @@ class gym_PBCN():
             
         self.x = next_x
         return next_x, done
+    
 
 
 
@@ -372,8 +375,9 @@ if __name__ == '__main__':
     controller_funcs_minimum2 = [minimize_func(controller_func) for controller_func in controller_funcs]
     [is_same_func(controller_func,controller_func_minimum) for controller_func,controller_func_minimum in zip(controller_funcs,controller_funcs_minimum)]
     pbn_model = embed_controller(pbcn_model, controller, minimum=True)
-    transition_list = pbn_model_to_transition_list(pbn_model)
-    is_controlled(pbn_model, target_x)
+    transition_list = pbcn_model_to_transition_list(pbn_model)
+    transition_list2 = pbcn_model_to_transition_list(pbcn_model,controller)
+    is_controlled(transition_list, target_x)
     drawset.transition_diagram(transition_list)
     
     
