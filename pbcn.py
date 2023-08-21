@@ -182,7 +182,9 @@ def pbcn_model_to_transition_list(pbcn_model, controller=None):
     pbcn_model,controllerを与えた場合とpbn_modelを与えた場合で結果は同じはず
     """
     n = len(pbcn_model)
-    u_space = None if controller is None else np.array(list(itertools.product([1,0], repeat=len(controller))), dtype=np.bool_)
+    if controller is not None:
+        m = int(np.log2(len(controller)))
+        u_space = np.array(list(itertools.product([1,0], repeat=m)), dtype=np.bool_)
     # 遷移パターンを列挙
     transition_patterns = list(
         zip(
