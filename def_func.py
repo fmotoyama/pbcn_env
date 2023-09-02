@@ -7,7 +7,7 @@ Created on Wed Jan  4 13:39:02 2023
 import itertools, copy
 import numpy as np
 
-from utils import QM
+from .utils import QM
 
 def def_f(mode, **kwargs):
     """ランダムにfuncを生成する"""
