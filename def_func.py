@@ -84,16 +84,27 @@ def def_f(mode, **kwargs):
         return {'pbcn_model': pbn_model}
     
     
-    def random2(n, n_div, gamma=3.0, reduce=True, avoid_constants=True):
-        # 初めに使う変数を決め、その変数を使ったランダムな式を生成する
+    def random2(n, n_div, gamma=3.0, max_func_length=None, reduce=True, avoid_constants=True):
+        """
+        初めに使う変数を決め、その変数を使ったランダムな式を生成する
+        n_div: 分岐を起こす要素の個数
+        max_func_length: 1つの要素がもつ変数の最大数
+        avoid_constants: 定数となった式を作り直す
+        """
+        if max_func_length is None:
+            max_func_length = n
         V = list(range(1,n+1))
         
         # 式を生成
-        p = np.array([1/(i**gamma) for i in V])    
+        p = np.array([1/(i**gamma) for i in range(1,max_func_length+1)])    
         p /= np.sum(p)      # 逆べき乗則の確率分布
         func_lists = []
         for _ in range(n + n_div):
-            V_subset = np.random.choice(V, size=np.random.choice(V, p=p), replace=False)
+            V_subset = np.random.choice(
+                V,
+                size=np.random.choice(range(1,max_func_length+1), p=p),
+                replace=False
+                )
             func_lists.append(make_random_func_list(V_subset, reduce=reduce, avoid_constants=avoid_constants))
         # 文字列に変換
         funcs = [
