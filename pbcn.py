@@ -226,7 +226,8 @@ def get_NM(pbcn_model, check=False):
     content = ' '.join(' '.join(func for func in transition_rule[0]) for transition_rule in pbcn_model)
     if check is False:
         # 式に出現する変数の最も大きいものを探す
-        N = max(map(int,set(re.findall(r'x\[(\d+)\]', content))), default=-1) + 1
+        #N = max(map(int,set(re.findall(r'x\[(\d+)\]', content))), default=-1) + 1
+        N = len(pbcn_model)
         M = max(map(int,set(re.findall(r'u\[(\d+)\]', content))), default=-1) + 1
     else:
         # 出現する変数の番号が飛んでいないことを確認
@@ -258,7 +259,8 @@ def load_pbcn_info(name='pbcn_model'):
 def is_same_func(func1, func2):
     content = ' '.join([func1,func2])
     # 最も大きい数字を検知する
-    N = max(map(int,set(re.findall(r'x\[(\d+)\]', content))), default=-1) + 1
+    #N = max(map(int,set(re.findall(r'x\[(\d+)\]', content))), default=-1) + 1
+    N = len(pbcn_model)
     M = max(map(int,set(re.findall(r'u\[(\d+)\]', content))), default=-1) + 1
     x_space = np.array(list(itertools.product([1,0], repeat=N)), dtype=np.bool_)
     u_space = np.array(list(itertools.product([1,0], repeat=M)), dtype=np.bool_)
