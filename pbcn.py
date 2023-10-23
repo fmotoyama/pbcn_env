@@ -259,13 +259,14 @@ def load_pbcn_info(name='pbcn_model'):
 def is_same_func(func1, func2):
     content = ' '.join([func1,func2])
     # 最も大きい数字を検知する
-    #N = max(map(int,set(re.findall(r'x\[(\d+)\]', content))), default=-1) + 1
-    N = len(pbcn_model)
-    M = max(map(int,set(re.findall(r'u\[(\d+)\]', content))), default=-1) + 1
-    x_space = np.array(list(itertools.product([1,0], repeat=N)), dtype=np.bool_)
-    u_space = np.array(list(itertools.product([1,0], repeat=M)), dtype=np.bool_)
+    x_idxs = list(map(int,set(re.findall(r'x\[(\d+)\]', content))))
+    u_idxs = list(map(int,set(re.findall(r'u\[(\d+)\]', content))))
+    x_len = len(x_idxs)
+    u_len = len(u_idxs)
     # 全状態に対する出力が一致することを確認
-    for x,u in itertools.product(x_space,u_space):
+    for bits in itertools.product([1,0], repeat=x_len+u_len):
+        x = {x_idx:b for x_idx,b in zip(x_idxs,bits[:x_len])}
+        u = {u_idx:b for u_idx,b in zip(u_idxs,bits[x_len:])}
         assert eval(func1) == eval(func2)
     return True
 
