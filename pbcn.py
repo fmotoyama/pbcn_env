@@ -16,7 +16,6 @@ import os, sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '.'))
 
 from utils import QM, BDD
-import drawset
 
 
 def get_unique_list(seq):
@@ -44,9 +43,9 @@ def calc(transition_rule: list, x: np.ndarray, u: np.ndarray=None):
     func = np.random.choice(a=transition_rule[0], size=1, p=transition_rule[1])[0]
     return eval(func)
 
-def controller_to_func(n, controller: np.ndarray):
+def controller_to_func(m, controller: np.ndarray):
     """express the controller as functions"""
-    m = int(np.log2(len(controller)))
+    n = int(np.log2(len(controller)))
     controller_funcs = [[] for _ in range(m)]
     for x_idx in range(2**n):
         u_idxs = np.where(idx2state(controller[x_idx], m))[0]   # controller_funcに項を追加するuのindex
@@ -65,9 +64,9 @@ def controller_to_func(n, controller: np.ndarray):
     return controller_funcs
 
 
-def controller_to_func_minimum(n, controller):
+def controller_to_func_minimum(m, controller):
     """QM法"""
-    m = int(np.log2(len(controller)))
+    n = int(np.log2(len(controller)))
     func_lists = [[] for _ in range(m)]
     for x_idx in range(2**n):
         u_idxs = np.where(idx2state(controller[x_idx], m))[0]   # controller_funcに項を追加するuのindex
@@ -360,6 +359,7 @@ class gym_PBCN():
 
 
 if __name__ == '__main__':
+    import drawset
     # txtファイルからインポート
     info = load_pbcn_info('pbcn_model_pinning_3 (2)')
     pbcn_model = info['pbcn_model']
