@@ -161,11 +161,10 @@ def get_ver_from_controller(n, controller):
     return vers
     
 
-def embed_controller(pbcn_model, controller, minimum=False):
+def embed_controller(pbcn_model, controller, m, minimum=False):
     """embed controller in pbcn_model"""
     n = len(pbcn_model)
-    m = int(np.log2(len(controller)))
-    controller_func = controller_to_func_minimum(n,controller) if minimum is True else controller_to_func(n, controller)
+    controller_func = controller_to_func_minimum(m,controller) if minimum is True else controller_to_func(m, controller)
     pbn_model = copy.deepcopy(pbcn_model)
     for transition_rule in pbn_model:
         for func_idx in range(len(transition_rule[0])):
@@ -376,8 +375,8 @@ if __name__ == '__main__':
     ver = get_ver_from_controller(n, controller)
     
     # コントローラを式にしてpbcnに埋め込む
-    controller_funcs = controller_to_func(n, controller)
-    controller_funcs_minimum = controller_to_func_minimum(n, controller)
+    controller_funcs = controller_to_func(m, controller)
+    controller_funcs_minimum = controller_to_func_minimum(m, controller)
     controller_funcs_minimum2 = [minimize_func(controller_func) for controller_func in controller_funcs]
     [is_same_func(controller_func,controller_func_minimum) for controller_func,controller_func_minimum in zip(controller_funcs,controller_funcs_minimum)]
     pbn_model = embed_controller(pbcn_model, controller, minimum=True)
