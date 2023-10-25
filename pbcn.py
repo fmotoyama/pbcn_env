@@ -287,7 +287,7 @@ def is_controlled(transition_list, target_x):
                 targets2 = targets2 | xs_parent
         targets = targets2
         
-    return transition_list_inv
+    return transition_list_inv if transition_list_inv else 0
 
     
 class gym_PBCN():
