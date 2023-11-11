@@ -124,7 +124,7 @@ def minimize_func(func: str):
 
 def get_ver_from_controller(n, controller):
     # find the variables used by the controller, using BDD
-    nonlocal BDD
+    global BDD
     BDD = BDD()
     m = int(np.log2(len(controller)))
     # 積和標準形をつくる
