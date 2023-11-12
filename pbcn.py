@@ -195,6 +195,7 @@ def pbcn_model_to_transition_list(pbcn_model, controller=None):
     
     # 遷移パターンごとの遷移を計算
     transition_list = dict()
+    temp = 2**n
     for x_idx,x in enumerate(itertools.product([1,0], repeat=n)):
         u = None if controller is None else u_space[controller[x_idx]]
         next_xs = np.array(
@@ -214,7 +215,7 @@ def pbcn_model_to_transition_list(pbcn_model, controller=None):
         x = ''.join(str(int(val)) for val in x)
         unique_next_xs = [''.join(str(int(val)) for val in unique_next_x) for unique_next_x in unique_next_xs]
         transition_list[x] = [unique_next_xs, probs]
-        print(f'\rpbcn_model_to_transition_list: {x_idx+1}/{2**n}', end='')
+        print(f'\rpbcn_model_to_transition_list: {x_idx+1}/{temp}', end='')
         
     return transition_list
     
