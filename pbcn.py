@@ -214,7 +214,7 @@ def pbcn_model_to_transition_list(pbcn_model, controller=None):
         x = ''.join(str(int(val)) for val in x)
         unique_next_xs = [''.join(str(int(val)) for val in unique_next_x) for unique_next_x in unique_next_xs]
         transition_list[x] = [unique_next_xs, probs]
-        #print(f'\rpbcn_model_to_transition_list: {x_idx+1}/{2**n}', end='')
+        print(f'\rpbcn_model_to_transition_list: {x_idx+1}/{2**n}', end='')
         
     return transition_list
     
