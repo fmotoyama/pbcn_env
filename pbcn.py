@@ -218,7 +218,7 @@ def pbcn_model_to_transition_list(pbcn_model, controller=None):
         
     return transition_list
 
-
+"""
 def pbcn_model_to_transition_list(pbcn_model, controller=None):
     n = len(pbcn_model)
     if controller is not None:
@@ -256,7 +256,7 @@ def pbcn_model_to_transition_list(pbcn_model, controller=None):
         print(f'\rpbcn_model_to_transition_list: {x_idx+1}/{temp}', end='')
         
     return transition_list
-
+"""
 
 """
 def get_attractor(pbn_model):
@@ -335,13 +335,6 @@ def is_controlled(transition_list, target_x):
         
     return transition_list_inv if transition_list_inv else 0
 
-
-def is_controlled(pbcn_model, controller, target_x):
-    # 再起処理で探索
-    #sign = 文字：ループ, 0:問題なし, 1:抜け出せないループの検知
-    targets = set()
-    global BDD
-    BDD = BDD()
 
     
 class gym_PBCN():

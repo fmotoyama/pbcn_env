@@ -194,9 +194,9 @@ def add_pinning_node(pbn_model, V=None):
     for v in V:
         funcs = [
             ''.join(['(', func, f') ^ u[{v}]'])
-            for func in pbcn_model[v][0]
+            for func in pbcn_model[v-1][0]
             ]
-        pbcn_model[v][0] = funcs
+        pbcn_model[v-1][0] = funcs
     return pbcn_model
     
     
