@@ -190,13 +190,13 @@ def make_random_func_list(n_or_V, p=0.5, reduce=False, avoid_constants=False):
 def add_pinning_node(pbn_model, V=None):
     pbcn_model = copy.deepcopy(pbn_model)
     if V is None:
-        V = list(pbcn_model)
+        V = list(range(len(pbcn_model)))
     for v in V:
         funcs = [
             ''.join(['(', func, f') ^ u[{v}]'])
-            for func in pbcn_model[v-1][0]
+            for func in pbcn_model[v][0]
             ]
-        pbcn_model[v-1][0] = funcs
+        pbcn_model[v][0] = funcs
     return pbcn_model
     
     
