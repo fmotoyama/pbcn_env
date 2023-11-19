@@ -187,14 +187,16 @@ def make_random_func_list(n_or_V, p=0.5, reduce=False, avoid_constants=False):
     
     return func_list
         
-def add_pinning_node(pbn_model):
+def add_pinning_node(pbn_model, V=None):
     pbcn_model = copy.deepcopy(pbn_model)
-    for v,transition_rule in enumerate(pbcn_model):
+    if V is None:
+        V = list(pbcn_model)
+    for v in V:
         funcs = [
             ''.join(['(', func, f') ^ u[{v}]'])
-            for func in transition_rule[0]
+            for func in pbcn_model[v][0]
             ]
-        transition_rule[0] = funcs
+        pbcn_model[v][0] = funcs
     return pbcn_model
     
     

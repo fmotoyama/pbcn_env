@@ -164,8 +164,7 @@ def get_ver_from_controller(n, controller):
 
 def embed_controller(pbcn_model, controller, m, minimum=False):
     """embed controller in pbcn_model"""
-    n = len(pbcn_model)
-    controller_func = controller_to_func_minimum(m,controller) if minimum is True else controller_to_func(m, controller)
+    controller_func = controller_to_func_minimum(m,controller) if minimum else controller_to_func(m, controller)
     pbn_model = copy.deepcopy(pbcn_model)
     for transition_rule in pbn_model:
         for func_idx in range(len(transition_rule[0])):
@@ -218,8 +217,53 @@ def pbcn_model_to_transition_list(pbcn_model, controller=None):
         print(f'\rpbcn_model_to_transition_list: {x_idx+1}/{temp}', end='')
         
     return transition_list
-    
 
+
+def pbcn_model_to_transition_list(pbcn_model, controller=None):
+    n = len(pbcn_model)
+    if controller is not None:
+        m = int(np.log2(len(controller)))
+        u_space = np.array(list(itertools.product([1,0], repeat=m)), dtype=np.bool_)
+    
+    # 各状態に対する遷移先・遷移確率を求める
+    transition_list = dict()
+    temp = 2**n
+    for x_idx,x in enumerate(itertools.product([1,0], repeat=n)):
+        u = u_space[controller[x_idx]] if controller else None
+        next_xs = []    # next_xs[bin_idx] = [bin1,(bin2),...]
+        for transition_rule in pbcn_model:
+            bins = [eval(func,{'x':x,'u':u}) for func in transition_rule[0]]
+            
+        
+        
+        next_xs = np.array(
+            [[eval(func,{'x':x,'u':u}) for func in funcs] for funcs,_ in transition_patterns],
+            dtype=np.bool_
+            )
+        # 遷移先が同じものを統合する
+        unique_next_xs = np.unique(next_xs, axis=0)
+        probs = [
+            sum(
+                transition_patterns[idx][1]
+                for idx in np.where((next_xs == unique_next_x).all(axis=1))[0]
+                )
+            for unique_next_x in unique_next_xs
+            ]
+        
+        x = ''.join(str(int(val)) for val in x)
+        unique_next_xs = [''.join(str(int(val)) for val in unique_next_x) for unique_next_x in unique_next_xs]
+        transition_list[x] = [unique_next_xs, probs]
+        print(f'\rpbcn_model_to_transition_list: {x_idx+1}/{temp}', end='')
+        
+    return transition_list
+
+
+"""
+def get_attractor(pbn_model):
+    n = len(pbn_model)
+    transition_list = pbcn_model_to_transition_list(pbn_model)
+    return ()
+"""  
 
 
 def get_NM(pbcn_model, check=False):
@@ -290,6 +334,14 @@ def is_controlled(transition_list, target_x):
         targets = targets2
         
     return transition_list_inv if transition_list_inv else 0
+
+
+def is_controlled(pbcn_model, controller, target_x):
+    # 再起処理で探索
+    #sign = 文字：ループ, 0:問題なし, 1:抜け出せないループの検知
+    targets = set()
+    global BDD
+    BDD = BDD()
 
     
 class gym_PBCN():
