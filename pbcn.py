@@ -353,7 +353,7 @@ def is_controlled2(pbcn_model, target_x, controller=None, m=None, first=True):
     
     
     
-    
+    '''
     def scan(x_idx):
         """x_idxから無限時間後に確率1でtarget_x_idxへ到達できるとき0、できないとき1、ループを検知したとき、それを返す"""
         assert sheet[x_idx] == 2
@@ -407,6 +407,7 @@ def is_controlled2(pbcn_model, target_x, controller=None, m=None, first=True):
         if scan(idxs[0]):
             return 1
     return 0
+    '''
         
         
 
