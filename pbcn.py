@@ -224,6 +224,7 @@ def pbcn_model_to_transition_list2(pbcn_model, controller=None, m=None):
     type(x) is str
     pbcn_model,controllerを与えた場合とpbn_modelを与えた場合で結果は同じはず
     """
+    n = len(pbcn_model)
     if controller is not None:
         u_space = np.array(list(itertools.product([1,0], repeat=m)), dtype=np.bool_)
         u_space = u_space[controller]
@@ -332,7 +333,7 @@ def is_controlled(transition_list, target_x):
         
     return transition_list_inv if transition_list_inv else 0
 
-
+'''
 def is_controlled2(pbcn_model, target_x, controller=None, m=None, first=True):
     """状態遷移させて、すべて目標状態へ行けることを確認する"""
     #!!!ループを失敗と誤検知する
@@ -353,7 +354,7 @@ def is_controlled2(pbcn_model, target_x, controller=None, m=None, first=True):
     
     
     
-    '''
+    
     def scan(x_idx):
         """x_idxから無限時間後に確率1でtarget_x_idxへ到達できるとき0、できないとき1、ループを検知したとき、それを返す"""
         assert sheet[x_idx] == 2
@@ -407,7 +408,7 @@ def is_controlled2(pbcn_model, target_x, controller=None, m=None, first=True):
         if scan(idxs[0]):
             return 1
     return 0
-    '''
+'''
         
         
 
