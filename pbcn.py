@@ -317,8 +317,8 @@ def is_controlled(transition_list, target_x):
     """全ての状態がtarget_xのbasinであることを確認する"""
     # 自分の遷移前を表現する辞書を作成
     transition_list_inv = defaultdict(set)
-    for x,temp in transition_list.items():
-        for next_x in temp[0]:
+    for x, (next_xs,_) in transition_list.items():
+        for next_x in next_xs:
             transition_list_inv[next_x].add(x)
     
     # 目標状態から遷移前をさかのぼる
@@ -328,88 +328,10 @@ def is_controlled(transition_list, target_x):
         for x in targets:
             xs_parent = transition_list_inv.pop(x, None)    # 一度探索した状態は表から削除
             if xs_parent:
-                targets2 = targets2 | xs_parent
+                targets2 |= xs_parent
         targets = targets2
         
     return transition_list_inv if transition_list_inv else 0
-
-'''
-def is_controlled2(pbcn_model, target_x, controller=None, m=None, first=True):
-    """状態遷移させて、すべて目標状態へ行けることを確認する"""
-    #!!!ループを失敗と誤検知する
-    n = len(pbcn_model)
-    x_space = np.array(list(itertools.product([1,0], repeat=n)), dtype=np.bool_)
-    if len(controller):
-        u_space = np.array(list(itertools.product([1,0], repeat=m)), dtype=np.bool_)
-        u_space = u_space[controller]
-    else:
-        u_space = [None for _ in range(2**n)]
-    target_x_idx = state2idx(target_x)
-    
-    
-    tree = {}
-    sheet = np.full(2**n, 2, dtype=np.uint8)    # 成功:0, 失敗:1, 未探索:2, 探索中:3
-    sheet[target_x_idx] = 0
-    
-    
-    
-    
-    
-    def scan(x_idx):
-        """x_idxから無限時間後に確率1でtarget_x_idxへ到達できるとき0、できないとき1、ループを検知したとき、それを返す"""
-        assert sheet[x_idx] == 2
-        sheet[x_idx] = 3
-        x = x_space[x_idx]
-        u = u_space[x_idx]
-        bins = [list(set(eval(func,{'x':x,'u':u}) for func in funcs)) for funcs,_ in pbcn_model]
-        next_xs = np.array(list(itertools.product(*bins)), dtype=np.bool_)
-        R = 1
-        loop = set()
-        for next_x in next_xs:
-            next_x_idx = state2idx(next_x)
-            if next_x_idx == target_x_idx:
-                # 目標状態に到達しているとき
-                R = 0
-            else:
-                sign = sheet[next_x_idx]
-                if sign == 3:
-                    # ループしたとき
-                    loop.add(next_x_idx)
-                    continue
-                elif sign == 0:
-                    # 結果が成功とわかっているとき
-                    R = 0
-                elif sign == 1:
-                    # 失敗
-                    sheet[x_idx] = 1
-                    return 1
-                else:
-                    # next_x_idxを探索
-                    R_next = scan(next_x_idx)
-                    if isinstance(R_next, set):
-                        loop |= R_next
-                    elif R_next == 1:
-                        # 失敗
-                        sheet[x_idx] = 1
-                        return 1
-                    else:
-                        R = 0
-        
-        loop.discard(x_idx)
-        if loop
-        sheet[x_idx] = R
-        return R
-            
-    
-    while True:
-        idxs = np.where(sheet == 2)[0]
-        if idxs.size == 0:
-            break
-        if scan(idxs[0]):
-            return 1
-    return 0
-'''
-        
         
 
     
