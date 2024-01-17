@@ -16,7 +16,7 @@ from graphviz import Digraph
 def transition_diagram(transition_list: dict, fname='transition_diagram'): 
     """transition_list[x] = [[x1,x2,...],[p1,p2,...]]"""
     
-    G = Digraph(format='png',engine='dot')#dot twopi
+    G = Digraph(format='pdf',engine='dot')#dot twopi
     G.attr(rankdir='LR') #'TB'
     G.attr('graph',dpi='300')#,ratio='0.5')
     #G = Digraph(format='png', engine='circo')
@@ -35,7 +35,21 @@ def transition_diagram(transition_list: dict, fname='transition_diagram'):
     os.remove(f'./figure/{fname}')
 
 
-
+if __name__ == '__main__':
+    import pbcn
+    
+    #info = pbcn.load_pbcn_info()
+    pbn_model = [
+        [['x[0] and x[1] and x[2] or x[1] and not x[2] and not x[0] or x[2] and not x[0] and not x[1]', 'x[0] and x[1] and x[2] or not x[2] and not x[0] or not x[0] and not x[1]'], [0.3, 0.7]],
+        [['x[0] or x[2]', 'x[0] or x[2] or not x[1]'], [0.3, 0.7]],
+        [['x[2] and not x[0] or x[1]'], [1]]
+        ]
+    pbcn_model = [
+        [['(x[0] and x[1] and x[2] or x[1] and not x[2] and not x[0] or x[2] and not x[0] and not x[1]) ^ (x[0] and x[2] or x[0] and not x[1])', '(x[0] and x[1] and x[2] or not x[2] and not x[0] or not x[0] and not x[1]) ^ (x[0] and x[2] or x[0] and not x[1])'], [0.3, 0.7]],
+        [['x[0] or x[2]', 'x[0] or x[2] or not x[1]'], [0.3, 0.7]],
+        [['x[2] and not x[0] or x[1]'], [1]]
+        ]
+    transition_diagram(pbcn.pbcn_model_to_transition_list(pbn_model), 'td1')
 
 
 
