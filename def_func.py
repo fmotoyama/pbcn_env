@@ -206,13 +206,13 @@ if __name__ == '__main__':
     import pbcn
     import drawset
     #info = def_f('import', name='pbcn_model_28')
-    #info = def_f('random', n=3, gamma=2.5)
-    info = def_f('random2', n=5, n_div=3, gamma=2, reduce=True)
+    info = def_f('random1', n=3, gamma=2.5)
+    #info = def_f('random2', n=5, n_div=3, gamma=2, reduce=True)
     #info = {'pbcn_model': [[['x[0] and x[1] and x[2] or x[1] and not x[2] and not x[0] or x[2] and not x[0] and not x[1]', 'x[0] and x[1] and x[2] or not x[2] and not x[0] or not x[0] and not x[1]'], [0.3, 0.7]], [['x[0] or x[2]', 'x[0] or x[2] or not x[1]'], [0.3, 0.7]], [['x[2] and not x[0] or x[1]'], [1]]]}
     
     pbn_model = info['pbcn_model']
-    #transition_list = PBCN.pbn_model_to_transition_list(info['pbcn_model'])
-    #drawset.transition_diagram(transition_list, 'temp')
+    transition_list = pbcn.pbcn_model_to_transition_list(info['pbcn_model'])
+    drawset.transition_diagram(transition_list, 'temp')
     pbcn_model = add_pinning_node(pbn_model)
     
     num = [len(transition_rule[0]) for transition_rule in pbn_model]

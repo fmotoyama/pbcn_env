@@ -39,6 +39,10 @@ def state2idx(state: np.ndarray):
 def idx2state(idx, l):
     return ~np.array([int(v) for v in format(idx,f'0{l}b')], dtype=np.bool_)
 
+def pbcn_model_to_parent(pbcn_model):
+    """入力を無視してノード間の親子関係を抽出""" 
+    return {i: set(re.findall(r'x\[(\d+)\]', ' '.join(funcs))) for i,(funcs,_) in enumerate(pbcn_model)}
+
 def calc(transition_rule: list, x: np.ndarray, u: np.ndarray=None):
     func = np.random.choice(a=transition_rule[0], size=1, p=transition_rule[1])[0]
     return eval(func)
@@ -310,7 +314,7 @@ def is_same_func(func1, func2):
         x = {x_idx:b for x_idx,b in zip(x_idxs,bits[:x_len])}
         u = {u_idx:b for u_idx,b in zip(u_idxs,bits[x_len:])}
         assert eval(func1) == eval(func2)
-    return True
+    return 0
 
 
 def is_controlled(transition_list, target_x):
@@ -332,7 +336,7 @@ def is_controlled(transition_list, target_x):
         targets = targets2
         
     return transition_list_inv if transition_list_inv else 0
-        
+
 
     
 class gym_PBCN():
@@ -417,6 +421,7 @@ if __name__ == '__main__':
     pbcn_model = info['pbcn_model']
     target_x = np.array(info['target_x'], dtype=np.bool_)
     controller = np.array(info['controller'], dtype=np.int32)
+    parent = pbcn_model_to_parent(pbcn_model)
     
     env = gym_PBCN(info)
     n = env.n
