@@ -41,7 +41,10 @@ def idx2state(idx, l):
 
 def pbcn_model_to_parent(pbcn_model):
     """入力を無視してノード間の親子関係を抽出""" 
-    return {i: set(re.findall(r'x\[(\d+)\]', ' '.join(funcs))) for i,(funcs,_) in enumerate(pbcn_model)}
+    return {i: set(map(int, 
+        re.findall(r'x\[(\d+)\]', ' '.join(funcs))
+        )) for i,(funcs,_) in enumerate(pbcn_model)
+        }
 
 def calc(transition_rule: list, x: np.ndarray, u: np.ndarray=None):
     func = np.random.choice(a=transition_rule[0], size=1, p=transition_rule[1])[0]
@@ -268,37 +271,26 @@ def get_attractor(pbn_model):
 """  
 
 
-def get_NM(pbcn_model, check=False):
+def get_NM(pbcn_model):
     content = ' '.join(' '.join(func for func in transition_rule[0]) for transition_rule in pbcn_model)
-    if check is False:
-        # 式に出現する変数の最も大きいものを探す
-        #N = max(map(int,set(re.findall(r'x\[(\d+)\]', content))), default=-1) + 1
-        N = len(pbcn_model)
-        M = max(map(int,set(re.findall(r'u\[(\d+)\]', content))), default=-1) + 1
-    else:
-        # 出現する変数の番号が飛んでいないことを確認
-        N = len(pbcn_model)
-        x_list = set(re.findall(r'x\[(\d+)\]', content))
-        u_list = set(re.findall(r'u\[(\d+)\]', content))
-        x_list = np.sort([int(s) for s in set(x_list)])
-        u_list = np.sort([int(s) for s in set(u_list)])
-        assert N == len(x_list)
-        M = len(u_list)
-        assert np.all(np.arange(N) == x_list)
-        assert np.all(np.arange(M) == u_list)
+    # 式の個数をNとする Nを超える番号のxがないことを確認
+    N = len(pbcn_model)
+    assert max(map(int,set(re.findall(r'x\[(\d+)\]', content))), default=-1) + 1 <= N
+    # uの最も大きい番号+1をMとする 番号がジャンプしていないことを確認
+    u_nums = sorted(map(int,set(re.findall(r'u\[(\d+)\]', content))))
+    M = max(u_nums, default=-1) + 1
+    assert  u_nums == [i for i in range(M)]
     return N,M
 
 
 def save_pbcn_info(info: dict, path='pbcn_model.txt'):
     """txtファイルとして出力する"""
-    #with open('data/pbcn_model.txt', mode='w') as f:
     with open(path, mode='w') as f:
         f.write(str(info))
 
 def load_pbcn_info(name='pbcn_model'):
     with open(f'data/{name}.txt', mode='r', encoding="utf-8") as f:
         l = f.readline()
-    #return ast.literal_eval(l)
     return eval(l)
     
     

@@ -13,10 +13,10 @@ from graphviz import Digraph
 
 
 
-def transition_diagram(transition_list: dict, fname='transition_diagram'): 
+def transition_diagram(transition_list: dict, fname='transition_diagram', format_='pdf'): 
     """transition_list[x] = [[x1,x2,...],[p1,p2,...]]"""
     
-    G = Digraph(format='pdf',engine='dot')#dot twopi
+    G = Digraph(format=format_, engine='dot')#dot twopi
     G.attr(rankdir='LR') #'TB'
     G.attr('graph',dpi='300')#,ratio='0.5')
     #G = Digraph(format='png', engine='circo')
@@ -35,8 +35,8 @@ def transition_diagram(transition_list: dict, fname='transition_diagram'):
     os.remove(f'./figure/{fname}')
 
 
-def wiring_diagram(parent: dict, fname='wiring_diagram'):
-    G = Digraph(format='svg', engine='sfdp')
+def wiring_diagram(parent: dict, fname='wiring_diagram', format_='svg'):
+    G = Digraph(format=format_, engine='sfdp')
     G.attr('node', shape='circle')
     G.attr('graph', splines = 'curved', overlap = '0:')
     G.attr('edge', arrowsize = '0.5', color="#00000080")
